@@ -1,0 +1,7 @@
+python-escpos
+Pillow
+opencv-python
+requests
+PyYAML
+fpdf           
+pyzbar         

@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"DockerRun.DisableAutoGenerateConfig": true,
+		"terminal.integrated.sendKeybindingsToShell": true,
+		"terminal.integrated.commandsToSkipShell": [
+			"pip install pillow fpdf opencv-python pyzbar"
+		]
+	}
+}

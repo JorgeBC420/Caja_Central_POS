@@ -1,0 +1,34 @@
+/caja_pos_cr/
+│
+├── core/
+│   ├── database.py
+│   ├── config.py
+│   └── models.py
+│
+├── modules/
+│   ├── invoicing/
+│   │   ├── electronic_invoice.py
+│   │   └── invoice_manager.py
+│   │
+│   ├── payments/
+│   │   ├── payment_methods.py
+│   │   ├── currency_exchange.py
+│   │   └── multi_payment.py
+│   │
+│   ├── inventory/
+│   │   ├── product.py
+│   │   └── inventory.py
+│   │
+│   └── api/
+│       ├── hacienda_api.py
+│       └── whatsapp_integration.py
+│
+├── ui/
+│   ├── ui_main.py
+│   ├── ui_sale.py
+│   ├── ui_payment.py
+│   ├── ui_inventory.py
+│   └── ui_reports.py
+│
+├── main_system.py
+└── app.py
