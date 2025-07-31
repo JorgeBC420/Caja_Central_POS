@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 from core.printer_utils import imprimir_ticket
 import datetime
+import traceback
 from PIL import Image, ImageTk  # Asegúrate de tener pillow instalado
 
 class InterfazPrincipal(tk.Toplevel):
@@ -910,7 +911,6 @@ class InterfazPrincipal(tk.Toplevel):
         ttk.Button(ventana, text="Guardar", command=guardar).grid(row=1, column=0, columnspan=2, pady=10)
 
     def buscar_producto(self, event=None):
-        # Permite buscar un producto por nombre o código
         ventana = tk.Toplevel(self)
         ventana.title("Buscar producto")
         ventana.transient(self)
@@ -926,14 +926,22 @@ class InterfazPrincipal(tk.Toplevel):
         def buscar():
             texto = busqueda_var.get().strip()
             if not texto:
-                resultado_var.set("Ingrese un término de búsqueda.")
+                resultado_var.set("⚠️ Ingrese un término de búsqueda.")
                 return
-            productos = self.sistema.db.buscar_productos(texto)
-            if productos:
-                resultado = "\n".join([f"{p[1]} - {p[2]} (Stock: {p[4]})" for p in productos])
-                resultado_var.set(resultado)
-            else:
-                resultado_var.set("No se encontraron productos.")
+
+            try:
+                productos = self.sistema.db.buscar_productos(texto)
+                if productos:
+                    resultado = "\n".join(
+                        [f"🛒 {p[1]} - ₡{p[2]:.2f} (Stock: {p[4]})" for p in productos]
+                    )
+                    resultado_var.set(resultado)
+                else:
+                    resultado_var.set("❌ No se encontraron productos.")
+            except Exception as e:
+                resultado_var.set("❌ Ocurrió un error al buscar.")
+                print("Error en buscar_producto:", e)
+                traceback.print_exc()
 
         ttk.Button(ventana, text="Buscar", command=buscar).grid(row=1, column=0, columnspan=2, pady=5)
         ttk.Label(ventana, textvariable=resultado_var, justify=tk.LEFT).grid(row=2, column=0, columnspan=2, padx=5, pady=5)
