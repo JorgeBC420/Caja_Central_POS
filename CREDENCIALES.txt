@@ -1,0 +1,32 @@
+🔐 CREDENCIALES DE ACCESO - SISTEMA POS
+==========================================
+
+📋 USUARIOS DISPONIBLES:
+
+👑 ADMINISTRADOR:
+   Usuario: admin
+   Contraseña: admin123
+   Permisos: Acceso completo al sistema
+
+💰 CAJERO:
+   Usuario: cajero
+   Contraseña: cajero123
+   Permisos: Ventas y clientes
+
+🛒 VENDEDOR:
+   Usuario: vendedor
+   Contraseña: vendedor123
+   Permisos: Ventas, inventario, clientes y reportes
+
+==========================================
+
+💡 INSTRUCCIONES:
+1. Ejecutar: python ui\main_tkinter.py
+2. Usar cualquiera de las credenciales arriba
+3. O usar los botones de acceso rápido en la interfaz
+
+⚡ ACCESO RÁPIDO:
+- Botones Admin, Cajero, Vendedor para login automático
+- Modo Invitado para acceso limitado
+
+🚀 ¡SISTEMA LISTO PARA USAR!

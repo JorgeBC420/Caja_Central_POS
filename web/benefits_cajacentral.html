@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CajaCentralPOS - Sistema de Punto de Venta para Costa Rica</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header .subtitle {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        .header .description {
+            font-size: 1.1rem;
+            max-width: 800px;
+            margin: 0 auto 40px;
+            opacity: 0.8;
+        }
+
+        .cta-button {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 15px 40px;
+            text-decoration: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(39, 174, 96, 0.3);
+        }
+
+        .cta-button:hover {
+            background: #229954;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(39, 174, 96, 0.4);
+        }
+
+        /* Features Section */
+        .features {
+            padding: 100px 0;
+            background: #f8f9fa;
+        }
+
+        .section-title {
+            text-align: center;
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .section-subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            color: #7f8c8d;
+            margin-bottom: 60px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            border-top: 5px solid #3498db;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+        }
+
+        .feature-card:nth-child(2) { border-top-color: #27ae60; }
+        .feature-card:nth-child(3) { border-top-color: #e74c3c; }
+        .feature-card:nth-child(4) { border-top-color: #f39c12; }
+        .feature-card:nth-child(5) { border-top-color: #9b59b6; }
+        .feature-card:nth-child(6) { border-top-color: #1abc9c; }
+
+        .feature-icon {
+            font-size: 3.5rem;
+            margin-bottom: 25px;
+            color: #3498db;
+        }
+
+        .feature-card:nth-child(2) .feature-icon { color: #27ae60; }
+        .feature-card:nth-child(3) .feature-icon { color: #e74c3c; }
+        .feature-card:nth-child(4) .feature-icon { color: #f39c12; }
+        .feature-card:nth-child(5) .feature-icon { color: #9b59b6; }
+        .feature-card:nth-child(6) .feature-icon { color: #1abc9c; }
+
+        .feature-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .feature-description {
+            color: #7f8c8d;
+            line-height: 1.8;
+        }
+
+        /* Benefits Section */
+        .benefits {
+            padding: 100px 0;
+            background: white;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .benefit-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 20px;
+        }
+
+        .benefit-icon {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+
+        .benefit-content h3 {
+            color: #2c3e50;
+            font-size: 1.3rem;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .benefit-content p {
+            color: #7f8c8d;
+            line-height: 1.7;
+        }
+
+        /* Compliance Section */
+        .compliance {
+            padding: 100px 0;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            color: white;
+        }
+
+        .compliance-content {
+            text-align: center;
+        }
+
+        .compliance-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .compliance-item {
+            background: rgba(255,255,255,0.1);
+            padding: 40px 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+        }
+
+        .compliance-item h3 {
+            font-size: 1.4rem;
+            margin-bottom: 15px;
+            color: #ecf0f1;
+        }
+
+        .compliance-item p {
+            opacity: 0.9;
+            line-height: 1.7;
+        }
+
+        /* Stats Section */
+        .stats {
+            padding: 80px 0;
+            background: #27ae60;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 40px;
+            text-align: center;
+        }
+
+        .stat-item h3 {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .stat-item p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        /* CTA Section */
+        .final-cta {
+            padding: 100px 0;
+            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            color: white;
+            text-align: center;
+        }
+
+        .final-cta h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            font-weight: 700;
+        }
+
+        .final-cta p {
+            font-size: 1.2rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 2.5rem;
+            }
+
+            .header .subtitle {
+                font-size: 1.2rem;
+            }
+
+            .section-title {
+                font-size: 2rem;
+            }
+
+            .features-grid,
+            .benefits-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .feature-card {
+                padding: 30px 20px;
+            }
+
+            .container {
+                padding: 0 15px;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .fade-in-up {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Additional Styles */
+        .highlight {
+            color: #27ae60;
+            font-weight: 600;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #27ae60;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header Section -->
+    <section class="header">
+        <div class="container">
+            <div class="badge">🚀 Sistema POS Profesional para Costa Rica</div>
+            <h1>CajaCentralPOS</h1>
+            <p class="subtitle">La solución completa para tu negocio</p>
+            <p class="description">
+                Sistema de punto de venta diseñado específicamente para cumplir con la normativa costarricense. 
+                Facturación electrónica, control de inventario, reportes avanzados y mucho más.
+            </p>
+            <a href="#contacto" class="cta-button">
+                <i class="fas fa-rocket"></i> Solicitar Demo Gratis
+            </a>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section class="features">
+        <div class="container">
+            <h2 class="section-title">¿Por qué elegir CajaCentralPOS?</h2>
+            <p class="section-subtitle">
+                Diseñado por contadores y desarrolladores costarricenses para simplificar la gestión de tu negocio
+            </p>
+
+            <div class="features-grid">
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-file-invoice"></i>
+                    </div>
+                    <h3 class="feature-title">Facturación Electrónica Oficial</h3>
+                    <p class="feature-description">
+                        Cumple al 100% con la normativa del Ministerio de Hacienda. Genera XML v4.4 y PDF automáticamente.
+                        Compatible con régimen <span class="highlight">simplificado</span> y <span class="highlight">tradicional</span>.
+                    </p>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-bar"></i>
+                    </div>
+                    <h3 class="feature-title">Reportes para Contadores</h3>
+                    <p class="feature-description">
+                        Reportes diseñados pensando en contadores. Exporta a PDF, Excel y formatos compatibles 
+                        con sistemas contables. <span class="highlight">¡Tu contador te lo agradecerá!</span>
+                    </p>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-barcode"></i>
+                    </div>
+                    <h3 class="feature-title">Control de Inventario Inteligente</h3>
+                    <p class="feature-description">
+                        Gestión avanzada de productos con códigos de barras, alertas de stock bajo, 
+                        kardex detallado y reportes de movimientos.
+                    </p>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <h3 class="feature-title">Múltiples Métodos de Pago</h3>
+                    <p class="feature-description">
+                        Efectivo, tarjetas, SINPE Móvil, cheques y más. Integración con sistemas de pago 
+                        locales y seguimiento detallado de cada transacción.
+                    </p>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <h3 class="feature-title">Gestión de Clientes y Proveedores</h3>
+                    <p class="feature-description">
+                        Base de datos completa con historial de compras, créditos, apartados y 
+                        comunicación automatizada vía WhatsApp y email.
+                    </p>
+                </div>
+
+                <div class="feature-card fade-in-up">
+                    <div class="feature-icon">
+                        <i class="fas fa-shield-alt"></i>
+                    </div>
+                    <h3 class="feature-title">Seguridad y Respaldos</h3>
+                    <p class="feature-description">
+                        Respaldos automáticos en la nube, control de acceso por roles, 
+                        auditoría completa y protección de datos sensibles.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits">
+        <div class="container">
+            <h2 class="section-title">Beneficios Reales para tu Negocio</h2>
+            <p class="section-subtitle">
+                Más que un software, es tu socio tecnológico para hacer crecer tu empresa
+            </p>
+
+            <div class="benefits-grid">
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <div class="benefit-content">
+                        <h3>Ahorra hasta 5 horas diarias</h3>
+                        <p>Automatiza tareas repetitivas como facturación, control de inventario y reportes. Tu tiempo es valioso, úsalo en hacer crecer tu negocio.</p>
+                    </div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-dollar-sign"></i>
+                    </div>
+                    <div class="benefit-content">
+                        <h3>Reduce costos operativos</h3>
+                        <p>Elimina errores humanos, reduce papel, optimiza inventario y mejora la eficiencia. El ROI se ve desde el primer mes.</p>
+                    </div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="benefit-content">
+                        <h3>Incrementa tus ventas</h3>
+                        <p>Análisis de tendencias, productos más vendidos, horarios pico y estrategias personalizadas para maximizar ingresos.</p>
+                    </div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-handshake"></i>
+                    </div>
+                    <div class="benefit-content">
+                        <h3>Mejora la experiencia del cliente</h3>
+                        <p>Procesos más rápidos, historial de compras, programas de lealtad y comunicación proactiva con tus clientes.</p>
+                    </div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <div class="benefit-content">
+                        <h3>Acceso desde cualquier lugar</h3>
+                        <p>Consulta reportes, supervisa ventas y gestiona tu negocio desde tu teléfono, tablet o computadora. ¡24/7!</p>
+                    </div>
+                </div>
+
+                <div class="benefit-item">
+                    <div class="benefit-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="benefit-content">
+                        <h3>Capacitación incluida</h3>
+                        <p>Entrenamiento completo para tu equipo, manuales en español y soporte técnico local. ¡Nunca estarás solo!</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Compliance Section -->
+    <section class="compliance">
+        <div class="container">
+            <div class="compliance-content">
+                <h2 class="section-title" style="color: white;">100% Cumplimiento Legal en Costa Rica</h2>
+                <p class="section-subtitle" style="color: #bdc3c7;">
+                    Desarrollado siguiendo todas las normativas locales para que te enfoques en vender, no en preocuparte por la ley
+                </p>
+
+                <div class="compliance-grid">
+                    <div class="compliance-item">
+                        <i class="fas fa-check-circle" style="font-size: 2rem; color: #27ae60; margin-bottom: 15px;"></i>
+                        <h3>Ministerio de Hacienda</h3>
+                        <p>Facturación electrónica v4.4, envío automático al ATV, consulta de estados y resolución DGT-R-48-2016.</p>
+                    </div>
+
+                    <div class="compliance-item">
+                        <i class="fas fa-file-alt" style="font-size: 2rem; color: #3498db; margin-bottom: 15px;"></i>
+                        <h3>Régimen Simplificado</h3>
+                        <p>Reportes trimestrales automáticos, cálculo de impuestos y documentación lista para presentar cada 3 meses.</p>
+                    </div>
+
+                    <div class="compliance-item">
+                        <i class="fas fa-calendar-alt" style="font-size: 2rem; color: #e74c3c; margin-bottom: 15px;"></i>
+                        <h3>Régimen Tradicional</h3>
+                        <p>Declaraciones mensuales, libros contables digitales y todos los reportes que necesita tu contador.</p>
+                    </div>
+
+                    <div class="compliance-item">
+                        <i class="fas fa-lock" style="font-size: 2rem; color: #f39c12; margin-bottom: 15px;"></i>
+                        <h3>Protección de Datos</h3>
+                        <p>Cumple con la Ley de Protección de Datos Personales N°8968, encriptación y almacenamiento seguro.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats Section -->
+    <section class="stats">
+        <div class="container">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <h3>500+</h3>
+                    <p>Negocios Confiando en Nosotros</p>
+                </div>
+                <div class="stat-item">
+                    <h3>99.9%</h3>
+                    <p>Uptime Garantizado</p>
+                </div>
+                <div class="stat-item">
+                    <h3>24/7</h3>
+                    <p>Soporte Técnico</p>
+                </div>
+                <div class="stat-item">
+                    <h3>100%</h3>
+                    <p>Satisfacción del Cliente</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Final CTA Section -->
+    <section class="final-cta">
+        <div class="container">
+            <h2>¿Listo para Transformar tu Negocio?</h2>
+            <p>
+                Únete a cientos de empresarios costarricenses que ya están ahorrando tiempo, 
+                reduciendo costos y aumentando sus ventas con CajaCentralPOS.
+            </p>
+            <a href="#contacto" class="cta-button" style="background: white; color: #3498db;">
+                <i class="fas fa-phone"></i> Contáctanos Ahora
+            </a>
+            <br><br>
+            <div style="font-size: 0.9rem; opacity: 0.8;">
+                <i class="fas fa-phone"></i> +506 2222-3333 &nbsp;&nbsp;|&nbsp;&nbsp; 
+                <i class="fas fa-envelope"></i> ventas@cajacentral.com &nbsp;&nbsp;|&nbsp;&nbsp; 
+                <i class="fas fa-whatsapp"></i> WhatsApp: 8888-9999
+            </div>
+        </div>
+    </section>
+
+    <script>
+        // Simple animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all feature cards
+        document.querySelectorAll('.feature-card, .benefit-item, .compliance-item').forEach(el => {
+            el.style.opacity = '0';
+            el.style.transform = 'translateY(30px)';
+            el.style.transition = 'all 0.6s ease';
+            observer.observe(el);
+        });
+
+        // Smooth scrolling for anchor links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "current_store_id": "store001",
+  "sync_interval": 300,
+  "central_server": {
+    "enabled": false,
+    "url": "https://api.cajacentral.com",
+    "api_key": ""
+  },
+  "stores": [
+    {
+      "id": "store001",
+      "name": "Sucursal Principal",
+      "address": "San José Centro",
+      "manager": "Admin Principal",
+      "phone": "2222-3333",
+      "email": "principal@empresa.com",
+      "is_active": true,
+      "sync_enabled": true
+    }
+  ]
+}

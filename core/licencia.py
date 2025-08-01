@@ -10,12 +10,18 @@ import json
 import logging
 from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple, Any
-from cryptography.fernet import Fernet
-from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 import os
 import platform
 import uuid
+
+try:
+    from cryptography.fernet import Fernet
+    from cryptography.hazmat.primitives import hashes
+    from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+    CRYPTO_AVAILABLE = True
+except ImportError:
+    CRYPTO_AVAILABLE = False
+    logging.warning("cryptography library not available, using basic encryption")
 
 from core.database import get_db_cursor, ejecutar_consulta_segura
 from core.models import LicenciaSistema, EstadoLicencia
@@ -42,26 +48,52 @@ class HardwareFingerprint:
         """Obtiene información básica del CPU"""
         try:
             if platform.system() == "Windows":
-                import wmi
-                c = wmi.WMI()
-                for processor in c.Win32_Processor():
-                    return processor.ProcessorId[:16]
+                try:
+                    import wmi
+                    c = wmi.WMI()
+                    for processor in c.Win32_Processor():
+                        return processor.ProcessorId[:16]
+                except ImportError:
+                    # Fallback usando subprocess
+                    try:
+                        import subprocess
+                        result = subprocess.run(['wmic', 'cpu', 'get', 'ProcessorId'], 
+                                              capture_output=True, text=True)
+                        lines = result.stdout.strip().split('\n')
+                        if len(lines) > 1:
+                            return lines[1].strip()[:16]
+                    except:
+                        pass
             else:
                 # Para Linux/Mac, usar información disponible
                 return platform.processor()[:16]
         except:
-            return platform.machine()[:16]
+            pass
+        return platform.machine()[:16]
     
     @staticmethod
     def obtener_disk_serial() -> str:
         """Obtiene serial del disco principal"""
         try:
             if platform.system() == "Windows":
-                import wmi
-                c = wmi.WMI()
-                for disk in c.Win32_PhysicalMedia():
-                    if disk.SerialNumber:
-                        return disk.SerialNumber.strip()[:16]
+                try:
+                    import wmi
+                    c = wmi.WMI()
+                    for disk in c.Win32_PhysicalMedia():
+                        if disk.SerialNumber:
+                            return disk.SerialNumber.strip()[:16]
+                except ImportError:
+                    # Fallback usando subprocess
+                    try:
+                        import subprocess
+                        result = subprocess.run(['wmic', 'diskdrive', 'get', 'serialnumber'], 
+                                              capture_output=True, text=True)
+                        lines = result.stdout.strip().split('\n')
+                        for line in lines[1:]:
+                            if line.strip():
+                                return line.strip()[:16]
+                    except:
+                        pass
             return "UNKNOWN_DISK"
         except:
             return "UNKNOWN_DISK"
@@ -94,14 +126,36 @@ class LicenseEncryption:
         self.master_key = master_key.encode()
         
     def _generar_clave_derivada(self, salt: bytes) -> bytes:
-        """Genera clave derivada usando PBKDF2"""
-        kdf = PBKDF2HMAC(
-            algorithm=hashes.SHA256(),
-            length=32,
-            salt=salt,
-            iterations=100000,
-        )
-        return base64.urlsafe_b64encode(kdf.derive(self.master_key))
+        """Genera una clave derivada usando PBKDF2"""
+        if CRYPTO_AVAILABLE:
+            kdf = PBKDF2HMAC(
+                algorithm=hashes.SHA256(),
+                length=32,
+                salt=salt,
+                iterations=100000,
+            )
+            return base64.urlsafe_b64encode(kdf.derive(self.master_key))
+        else:
+            # Fallback usando hashlib PBKDF2
+            import hashlib
+            dk = hashlib.pbkdf2_hmac('sha256', self.master_key, salt, 100000, 32)
+            return base64.urlsafe_b64encode(dk)
+    
+    def _encriptar_basico(self, data: str, key: bytes) -> bytes:
+        """Encriptación básica usando XOR cuando cryptography no está disponible"""
+        key_hash = hashlib.sha256(key).digest()
+        result = bytearray()
+        for i, byte in enumerate(data.encode()):
+            result.append(byte ^ key_hash[i % len(key_hash)])
+        return bytes(result)
+    
+    def _desencriptar_basico(self, data: bytes, key: bytes) -> str:
+        """Desencriptación básica usando XOR cuando cryptography no está disponible"""
+        key_hash = hashlib.sha256(key).digest()
+        result = bytearray()
+        for i, byte in enumerate(data):
+            result.append(byte ^ key_hash[i % len(key_hash)])
+        return result.decode()
     
     def encriptar_licencia(self, datos_licencia: Dict[str, Any]) -> str:
         """Encripta los datos de la licencia"""
@@ -114,10 +168,13 @@ class LicenseEncryption:
             
             # Crear clave de encriptación
             key = self._generar_clave_derivada(salt)
-            f = Fernet(key)
             
-            # Encriptar datos
-            encrypted_data = f.encrypt(json_data.encode())
+            if CRYPTO_AVAILABLE:
+                f = Fernet(key)
+                encrypted_data = f.encrypt(json_data.encode())
+            else:
+                # Usar encriptación básica
+                encrypted_data = self._encriptar_basico(json_data, key)
             
             # Combinar salt y datos encriptados
             license_data = base64.b64encode(salt + encrypted_data).decode()
@@ -139,13 +196,17 @@ class LicenseEncryption:
             
             # Generar clave de desencriptación
             key = self._generar_clave_derivada(salt)
-            f = Fernet(key)
             
-            # Desencriptar datos
-            decrypted_data = f.decrypt(encrypted_data)
+            if CRYPTO_AVAILABLE:
+                f = Fernet(key)
+                decrypted_data = f.decrypt(encrypted_data)
+                json_data = decrypted_data.decode()
+            else:
+                # Usar desencriptación básica
+                json_data = self._desencriptar_basico(encrypted_data, key)
             
             # Convertir de JSON
-            datos_licencia = json.loads(decrypted_data.decode())
+            datos_licencia = json.loads(json_data)
             
             return datos_licencia
             

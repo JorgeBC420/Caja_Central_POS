@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Caja Central POS - Sistema Integral de Punto de Venta</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        /* Header */
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px 0;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo h1 {
+            font-size: 2rem;
+            color: #2c3e50;
+            font-weight: 700;
+        }
+
+        .version {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        /* Hero Section */
+        .hero {
+            padding: 80px 0;
+            text-align: center;
+            color: white;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .hero p {
+            font-size: 1.3rem;
+            margin-bottom: 40px;
+            opacity: 0.9;
+        }
+
+        .cta-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 15px 30px;
+            border: none;
+            border-radius: 50px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-block;
+        }
+
+        .btn-primary {
+            background: white;
+            color: #667eea;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 2px solid white;
+        }
+
+        .btn-secondary:hover {
+            background: white;
+            color: #667eea;
+        }
+
+        /* Features Section */
+        .features {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .section-title {
+            text-align: center;
+            margin-bottom: 60px;
+        }
+
+        .section-title h2 {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .section-title p {
+            font-size: 1.2rem;
+            color: #7f8c8d;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 40px;
+            margin-top: 60px;
+        }
+
+        .feature-card {
+            background: white;
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            border: 1px solid #f0f0f0;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+        }
+
+        .feature-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin-bottom: 15px;
+        }
+
+        .feature-card p {
+            color: #7f8c8d;
+            line-height: 1.7;
+        }
+
+        /* Systems Section */
+        .systems {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+
+        .systems-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+        }
+
+        .system-card {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .system-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 45px rgba(0, 0, 0, 0.15);
+        }
+
+        .system-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .system-icon {
+            font-size: 2.5rem;
+        }
+
+        .system-card h3 {
+            color: #2c3e50;
+            font-size: 1.4rem;
+        }
+
+        .system-features {
+            list-style: none;
+        }
+
+        .system-features li {
+            padding: 8px 0;
+            color: #555;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .system-features li:before {
+            content: "✅ ";
+            margin-right: 10px;
+        }
+
+        /* Technologies Section */
+        .technologies {
+            padding: 80px 0;
+            background: white;
+        }
+
+        .tech-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .tech-card {
+            text-align: center;
+            padding: 30px 20px;
+            border-radius: 15px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+
+        .tech-card:hover {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            transform: translateY(-5px);
+        }
+
+        .tech-card .tech-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+
+        /* Benefits Section */
+        .benefits {
+            padding: 80px 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .benefits-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+
+        .benefit-card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 30px;
+            border-radius: 15px;
+            text-align: center;
+        }
+
+        .benefit-icon {
+            font-size: 3rem;
+            margin-bottom: 20px;
+        }
+
+        .benefit-card h3 {
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+
+        /* Footer */
+        footer {
+            background: #2c3e50;
+            color: white;
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .footer-content {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 40px;
+            margin-bottom: 30px;
+        }
+
+        .footer-section h3 {
+            margin-bottom: 20px;
+            color: #ecf0f1;
+        }
+
+        .footer-section p, .footer-section li {
+            color: #bdc3c7;
+            line-height: 1.6;
+        }
+
+        .footer-section ul {
+            list-style: none;
+        }
+
+        .footer-section li {
+            padding: 5px 0;
+        }
+
+        .footer-bottom {
+            border-top: 1px solid #34495e;
+            padding-top: 20px;
+            color: #95a5a6;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+
+            .cta-buttons {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .features-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 20px;
+            }
+        }
+
+        /* Animations */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .feature-card, .system-card, .benefit-card {
+            animation: fadeInUp 0.6s ease-out;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="header-content">
+                <div class="logo">
+                    <div class="logo-icon">🏪</div>
+                    <div>
+                        <h1>Caja Central POS</h1>
+                        <p style="color: #7f8c8d; margin: 0; font-size: 0.9rem;">Sistema Integral Costa Rica</p>
+                    </div>
+                </div>
+                <div class="version">v2.0 - Edición Completa</div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <h1>🚀 Sistema POS de Nueva Generación</h1>
+            <p>La solución más completa para tu negocio en Costa Rica</p>
+            <div class="cta-buttons">
+                <a href="#features" class="btn btn-primary">🔍 Explorar Características</a>
+                <a href="#systems" class="btn btn-secondary">🏪 Ver Sistemas</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Features Section -->
+    <section id="features" class="features">
+        <div class="container">
+            <div class="section-title">
+                <h2>✨ Características Principales</h2>
+                <p>Un sistema completo que revoluciona la gestión de tu negocio</p>
+            </div>
+
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">🏪</div>
+                    <h3>Multi-Tienda Conectada</h3>
+                    <p>Gestiona múltiples sucursales con inventario sincronizado en tiempo real. Transferencias automáticas, control centralizado y reportes consolidados.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🍽️</div>
+                    <h3>Sistema de Restaurante</h3>
+                    <p>Gestión completa de mesas, cuentas activas, menú interactivo y órdenes de cocina. Perfecto para restaurantes, cafeterías y bares.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">📊</div>
+                    <h3>Análisis Administrativo</h3>
+                    <p>Dashboard ejecutivo con métricas en tiempo real, análisis de ventas por hora, rendimiento de cajeros y proyecciones de negocio.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🧾</div>
+                    <h3>Facturación Electrónica CR</h3>
+                    <p>Cumplimiento total con Hacienda Costa Rica. Generación automática de XML v4.4, PDF profesionales y envío automático al ministerio.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">🔍</div>
+                    <h3>Búsqueda Inteligente</h3>
+                    <p>Sistema de búsqueda avanzado con códigos de barras, filtros múltiples y gestión inteligente de inventario con alertas automáticas.</p>
+                </div>
+
+                <div class="feature-card">
+                    <div class="feature-icon">☁️</div>
+                    <h3>Sincronización Automática</h3>
+                    <p>Datos sincronizados en tiempo real entre todas las sucursales. Respaldos automáticos y recuperación de datos garantizada.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Systems Section -->
+    <section id="systems" class="systems">
+        <div class="container">
+            <div class="section-title">
+                <h2>🏗️ Sistemas Implementados</h2>
+                <p>Módulos especializados para cada necesidad de tu negocio</p>
+            </div>
+
+            <div class="systems-grid">
+                <div class="system-card">
+                    <div class="system-header">
+                        <div class="system-icon">🏪</div>
+                        <h3>Sistema Multi-Tienda</h3>
+                    </div>
+                    <ul class="system-features">
+                        <li>Dashboard consolidado en tiempo real</li>
+                        <li>Inventario sincronizado entre sucursales</li>
+                        <li>Transferencias de stock automáticas</li>
+                        <li>Alertas de stock crítico</li>
+                        <li>Reportes de rendimiento por tienda</li>
+                        <li>Configuración de múltiples ubicaciones</li>
+                    </ul>
+                </div>
+
+                <div class="system-card">
+                    <div class="system-header">
+                        <div class="system-icon">🍽️</div>
+                        <h3>Sistema de Restaurante</h3>
+                    </div>
+                    <ul class="system-features">
+                        <li>Grid visual de mesas con estados</li>
+                        <li>Cuentas activas con tiempo transcurrido</li>
+                        <li>Menú interactivo por categorías</li>
+                        <li>Órdenes de cocina con prioridades</li>
+                        <li>Control de mesas VIP y barra</li>
+                        <li>Reportes especializados para restaurante</li>
+                    </ul>
+                </div>
+
+                <div class="system-card">
+                    <div class="system-header">
+                        <div class="system-icon">📊</div>
+                        <h3>Historial Administrativo</h3>
+                    </div>
+                    <ul class="system-features">
+                        <li>Panel administrativo completo</li>
+                        <li>Gráficos de ventas por hora</li>
+                        <li>Top productos más vendidos</li>
+                        <li>Análisis de rendimiento por cajero</li>
+                        <li>Exportación Excel, PDF y CSV</li>
+                        <li>Filtros avanzados y búsqueda</li>
+                    </ul>
+                </div>
+
+                <div class="system-card">
+                    <div class="system-header">
+                        <div class="system-icon">🧾</div>
+                        <h3>Facturación Electrónica</h3>
+                    </div>
+                    <ul class="system-features">
+                        <li>XML v4.4 automático para Hacienda</li>
+                        <li>PDF profesionales para clientes</li>
+                        <li>Envío automático al ministerio</li>
+                        <li>Gestión de certificados digitales</li>
+                        <li>Códigos de actividad económica</li>
+                        <li>Cumplimiento legal garantizado</li>
+                    </ul>
+                </div>
+
+                <div class="system-card">
+                    <div class="system-header">
+                        <div class="system-icon">🔍</div>
+                        <h3>Búsqueda e Inventario</h3>
+                    </div>
+                    <ul class="system-features">
+                        <li>Búsqueda avanzada de productos</li>
+                        <li>Gestión de códigos de barras</li>
+                        <li>Control de stock en tiempo real</li>
+                        <li>Alertas de inventario bajo</li>
+                        <li>Administración de productos</li>
+                        <li>Reportes de movimientos</li>
+                    </ul>
+                </div>
+
+                <div class="system-card">
+                    <div class="system-header">
+                        <div class="system-icon">💳</div>
+                        <h3>Métodos de Pago</h3>
+                    </div>
+                    <ul class="system-features">
+                        <li>Efectivo con cálculo de cambio</li>
+                        <li>Tarjetas de crédito y débito</li>
+                        <li>Transferencias bancarias</li>
+                        <li>Pagos mixtos combinados</li>
+                        <li>Integración con terminales</li>
+                        <li>Reportes de métodos de pago</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Technologies Section -->
+    <section class="technologies">
+        <div class="container">
+            <div class="section-title">
+                <h2>⚡ Tecnologías Utilizadas</h2>
+                <p>Stack tecnológico moderno y confiable</p>
+            </div>
+
+            <div class="tech-grid">
+                <div class="tech-card">
+                    <div class="tech-icon">🐍</div>
+                    <h3>Python</h3>
+                    <p>Backend robusto y escalable</p>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-icon">🖥️</div>
+                    <h3>Tkinter</h3>
+                    <p>Interfaz nativa multiplataforma</p>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-icon">🗄️</div>
+                    <h3>SQLite</h3>
+                    <p>Base de datos eficiente</p>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-icon">📊</div>
+                    <h3>Matplotlib</h3>
+                    <p>Gráficos profesionales</p>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-icon">📋</div>
+                    <h3>Pandas</h3>
+                    <p>Análisis de datos avanzado</p>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-icon">📄</div>
+                    <h3>ReportLab</h3>
+                    <p>Generación de PDF</p>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-icon">🌐</div>
+                    <h3>REST APIs</h3>
+                    <p>Integración con servicios</p>
+                </div>
+
+                <div class="tech-card">
+                    <div class="tech-icon">🔒</div>
+                    <h3>Cryptography</h3>
+                    <p>Seguridad garantizada</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits">
+        <div class="container">
+            <div class="section-title">
+                <h2 style="color: white;">🎯 Ventajas Competitivas</h2>
+                <p style="color: rgba(255,255,255,0.9);">Por qué elegir Caja Central POS</p>
+            </div>
+
+            <div class="benefits-grid">
+                <div class="benefit-card">
+                    <div class="benefit-icon">💰</div>
+                    <h3>Retorno de Inversión</h3>
+                    <p>Optimiza operaciones y reduce costos operativos hasta en un 40%</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">⚡</div>
+                    <h3>Eficiencia Operativa</h3>
+                    <p>Automatiza procesos y reduce tiempo de transacciones en 60%</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">📈</div>
+                    <h3>Crecimiento Escalable</h3>
+                    <p>Crece desde 1 hasta N sucursales sin límites de expansión</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">🛡️</div>
+                    <h3>Cumplimiento Legal</h3>
+                    <p>100% compatible con regulaciones de Hacienda Costa Rica</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">📱</div>
+                    <h3>Interfaz Moderna</h3>
+                    <p>Diseño intuitivo que reduce curva de aprendizaje</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">🔧</div>
+                    <h3>Soporte Completo</h3>
+                    <p>Implementación, capacitación y soporte técnico incluido</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h3>🏪 Caja Central POS</h3>
+                    <p>Sistema integral de punto de venta diseñado específicamente para empresas costarricenses. Cumplimiento legal garantizado y soporte local.</p>
+                </div>
+
+                <div class="footer-section">
+                    <h3>✨ Características</h3>
+                    <ul>
+                        <li>Multi-tienda conectada</li>
+                        <li>Sistema de restaurante</li>
+                        <li>Facturación electrónica CR</li>
+                        <li>Análisis administrativo</li>
+                        <li>Inventario inteligente</li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h3>🚀 Tecnología</h3>
+                    <ul>
+                        <li>Python + Tkinter</li>
+                        <li>SQLite Database</li>
+                        <li>REST APIs</li>
+                        <li>Matplotlib Charts</li>
+                        <li>PDF Generation</li>
+                    </ul>
+                </div>
+
+                <div class="footer-section">
+                    <h3>📞 Contacto</h3>
+                    <p>🇨🇷 Diseñado en Costa Rica</p>
+                    <p>📧 Soporte técnico especializado</p>
+                    <p>⚡ Implementación rápida</p>
+                    <p>🛡️ Garantía de funcionamiento</p>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                <p>&copy; 2025 Caja Central POS - Sistema Integral Costa Rica. Desarrollado con ❤️ para PyMEs costarricenses.</p>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        // Smooth scroll for navigation links
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // Animation on scroll
+        const observerOptions = {
+            threshold: 0.1,
+            rootMargin: '0px 0px -50px 0px'
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.style.opacity = '1';
+                    entry.target.style.transform = 'translateY(0)';
+                }
+            });
+        }, observerOptions);
+
+        // Observe all cards
+        document.querySelectorAll('.feature-card, .system-card, .benefit-card, .tech-card').forEach(card => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(30px)';
+            card.style.transition = 'all 0.6s ease';
+            observer.observe(card);
+        });
+    </script>
+</body>
+</html>

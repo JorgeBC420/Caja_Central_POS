@@ -174,3 +174,49 @@ class CRUDHelper:
             messagebox.showerror("Error", f"Error al eliminar: {message}")
         
         return success
+
+def create_styled_frame(parent, title=""):
+    """Crea un frame estilizado con título"""
+    if title:
+        frame = ttk.LabelFrame(parent, text=title, padding="10")
+    else:
+        frame = ttk.Frame(parent, padding="10")
+    return frame
+
+def create_input_frame(parent, label_text, row, column=0, width=20, **kwargs):
+    """Crea un frame con label y entry"""
+    ttk.Label(parent, text=label_text).grid(row=row, column=column, sticky="w", padx=5, pady=2)
+    entry = ttk.Entry(parent, width=width, **kwargs)
+    entry.grid(row=row, column=column+1, sticky="ew", padx=5, pady=2)
+    return entry
+
+def format_currency(amount):
+    """Formatea cantidad como moneda costarricense"""
+    try:
+        return f"₡{float(amount):,.2f}"
+    except (ValueError, TypeError):
+        return "₡0.00"
+
+def validate_numeric_input(value):
+    """Valida entrada numérica"""
+    if value == "":
+        return True
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+def center_window(window, width=None, height=None):
+    """Centra una ventana en la pantalla"""
+    window.update_idletasks()
+    
+    if width is None:
+        width = window.winfo_width()
+    if height is None:
+        height = window.winfo_height()
+    
+    x = (window.winfo_screenwidth() // 2) - (width // 2)
+    y = (window.winfo_screenheight() // 2) - (height // 2)
+    
+    window.geometry(f"{width}x{height}+{x}+{y}")

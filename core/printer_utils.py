@@ -20,12 +20,20 @@ try:
 except ImportError:
     ESC_POS_AVAILABLE = False
 
-try:
-    import win32print
-    import win32api
-    WIN32_AVAILABLE = platform.system() == "Windows"
-except ImportError:
-    WIN32_AVAILABLE = False
+# Librerías de impresión para Windows (opcional)
+# Comentadas para evitar errores de importación si pywin32 no está instalado
+WIN32_AVAILABLE = False
+win32print = None
+win32api = None
+
+# Descomentar estas líneas si pywin32 está instalado:
+# try:
+#     if platform.system() == "Windows":
+#         import win32print
+#         import win32api
+#         WIN32_AVAILABLE = True
+# except ImportError:
+#     pass
 
 from core.database import get_db_cursor, ejecutar_consulta_segura
 from core.models import ConfigTienda

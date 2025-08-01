@@ -3,5 +3,20 @@ Pillow
 opencv-python
 requests
 PyYAML
-fpdf           
-pyzbar         
+fpdf2
+pyzbar
+cryptography
+wmi;platform_system=="Windows"
+psutil
+pywin32;platform_system=="Windows"
+openpyxl
+pandas
+matplotlib
+reportlab
+jinja2
+xlsxwriter
+# Dependencias para facturación electrónica Costa Rica
+xmltodict
+python-dateutil
+pytz
+lxml         
