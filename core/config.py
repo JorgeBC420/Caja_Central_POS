@@ -105,3 +105,8 @@ class ConfigManager:
                 return True
             else:
                 return False
+
+def cargar_config_tienda():
+    """Función de conveniencia para cargar la configuración de la tienda"""
+    config_manager = ConfigManager()
+    return config_manager.config

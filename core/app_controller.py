@@ -12,10 +12,11 @@ class AppController:
         self.root_app_tk = tk.Tk()
         self.root_app_tk.withdraw()  # Raíz principal oculta
         self.db = DatabaseManager()
-        self.db.inicializar_tablas()
+        self.db.inicializar_tablas()  # Verificar que este método existe
         self.config_tienda = cargar_config_tienda()
         self.sistema_caja = SistemaCaja()
         self.sistema_caja.db = self.db  # Asignar la instancia de DatabaseManager al sistema
+        self.sistema_caja.config = self.config_tienda  # Asignar configuración
         self.ventana_actual = None
 
     def mostrar_ventana_login(self):

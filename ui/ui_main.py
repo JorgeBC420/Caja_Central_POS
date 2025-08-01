@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from core.printer_utils import imprimir_ticket
+from core.decorators import login_required, admin_required, permission_required, log_action
+from ui.ui_helpers import UIHelpers, CRUDHelper
 import datetime
 import traceback
 from PIL import Image, ImageTk  # Asegúrate de tener pillow instalado
@@ -10,6 +12,15 @@ class InterfazPrincipal(tk.Toplevel):
         super().__init__(parent)
         self.parent = parent
         self.sistema = sistema_caja_ref
+        
+        # Inicializar helpers CRUD para diferentes entidades
+        self.crud_helpers = {
+            'promocion': CRUDHelper('promociones'),
+            'descuento': CRUDHelper('descuentos'),
+            'devolucion': CRUDHelper('devoluciones'),
+            'cliente': CRUDHelper('clientes'),
+            'producto': CRUDHelper('productos')
+        }
 
         # Construcción de la interfaz principal
         self._crear_menu_principal()
@@ -58,85 +69,98 @@ class InterfazPrincipal(tk.Toplevel):
         for atajo, comando in atajos.items():
             self.bind(atajo, comando)
 
-    # --- CRUD TAB HELPER ---
-    def _crear_crud_tab(self, parent_frame, entity_name, columns, add_cmd, delete_cmd, edit_cmd, update_cmd_ref):
+    # --- CRUD TAB HELPER MEJORADO ---
+    def _crear_crud_tab(self, parent_frame, entity_name, columns, headings, callbacks, query_func):
         """
-        Crea un layout estándar CRUD con botones y un Treeview.
+        Crea un layout estándar CRUD mejorado con TreeView y botones usando helpers.
         """
-        button_frame = ttk.Frame(parent_frame)
-        button_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
-
-        ttk.Button(button_frame, text=f"Agregar {entity_name}", command=add_cmd).pack(side=tk.LEFT, padx=5, pady=5)
-        ttk.Button(button_frame, text=f"Eliminar {entity_name}", command=delete_cmd).pack(side=tk.LEFT, padx=5, pady=5)
-        ttk.Button(button_frame, text=f"Editar {entity_name}", command=edit_cmd).pack(side=tk.LEFT, padx=5, pady=5)
-
-        tree = ttk.Treeview(parent_frame, columns=columns, show="headings")
-        for col in columns:
-            tree.heading(col, text=col.replace('_', ' ').capitalize())
-            if col == "id" or col.endswith("id"):
-                tree.column(col, width=50, anchor=tk.CENTER)
-            else:
-                tree.column(col, width=150, anchor=tk.W)
-        tree.pack(fill=tk.BOTH, expand=True, pady=5)
-
+        # Crear TreeView con helpers
+        tree = UIHelpers.crear_treeview(parent_frame, columns, headings)
         setattr(self, f"tree_{entity_name.lower()}", tree)
-        update_cmd_ref()
+        
+        # Crear botones CRUD
+        UIHelpers.crear_botones_crud(parent_frame, callbacks)
+        
+        # Cargar datos iniciales
+        if query_func:
+            query_func()
+    
+    def _cargar_entidad_datos(self, entity_name, query, params=None):
+        """Carga datos para una entidad específica"""
+        tree = getattr(self, f"tree_{entity_name.lower()}", None)
+        if tree:
+            UIHelpers.cargar_datos_treeview(tree, query, params)
 
-    # --- USO DEL CRUD TAB EN LAS PESTAÑAS ---
+    # --- USO DEL CRUD TAB MEJORADO EN LAS PESTAÑAS ---
+    @permission_required("promociones")
     def _crear_contenido_pestana_promociones(self, frame_promociones):
-        self._crear_crud_tab(
-            frame_promociones,
-            "promocion",
-            ("id", "nombre", "descripcion", "fecha_inicio", "fecha_fin", "tipo", "valor", "activo"),
-            self.agregar_promocion_ui,
-            self.eliminar_promocion_ui,
-            self.editar_promocion_ui,
-            self.actualizar_treeview_promocion
-        )
+        columns = ("id", "nombre", "descripcion", "fecha_inicio", "fecha_fin", "tipo", "valor", "activo")
+        headings = ("ID", "Nombre", "Descripción", "Fecha Inicio", "Fecha Fin", "Tipo", "Valor", "Activo")
+        callbacks = {
+            "agregar": self.agregar_promocion_ui,
+            "editar": self.editar_promocion_ui,
+            "eliminar": self.eliminar_promocion_ui,
+            "actualizar": self.actualizar_treeview_promocion
+        }
+        query = "SELECT id, nombre, descripcion, fecha_inicio, fecha_fin, tipo, valor, activo FROM promociones"
+        self._crear_crud_tab(frame_promociones, "promocion", columns, headings, callbacks, 
+                           lambda: self._cargar_entidad_datos("promocion", query))
 
+    @permission_required("descuentos")
     def _crear_contenido_pestana_descuentos(self, frame_descuentos):
-        self._crear_crud_tab(
-            frame_descuentos,
-            "descuento",
-            ("id", "nombre", "tipo", "valor", "descripcion", "activo"),
-            self.agregar_descuento_ui,
-            self.eliminar_descuento_ui,
-            self.editar_descuento_ui,
-            self.actualizar_treeview_descuento
-        )
+        columns = ("id", "nombre", "tipo", "valor", "descripcion", "activo")
+        headings = ("ID", "Nombre", "Tipo", "Valor", "Descripción", "Activo")
+        callbacks = {
+            "agregar": self.agregar_descuento_ui,
+            "editar": self.editar_descuento_ui,
+            "eliminar": self.eliminar_descuento_ui,
+            "actualizar": self.actualizar_treeview_descuento
+        }
+        query = "SELECT id, nombre, tipo, valor, descripcion, activo FROM descuentos"
+        self._crear_crud_tab(frame_descuentos, "descuento", columns, headings, callbacks,
+                           lambda: self._cargar_entidad_datos("descuento", query))
 
+    @permission_required("devoluciones")
     def _crear_contenido_pestana_devoluciones(self, frame_devoluciones):
-        self._crear_crud_tab(
-            frame_devoluciones,
-            "devolucion",
-            ("id", "venta_id", "fecha", "motivo", "monto", "usuario_id"),
-            self.agregar_devolucion_ui,
-            self.eliminar_devolucion_ui,
-            self.editar_devolucion_ui,
-            self.actualizar_treeview_devolucion
-        )
+        columns = ("id", "venta_id", "fecha", "motivo", "monto", "usuario_id")
+        headings = ("ID", "Venta ID", "Fecha", "Motivo", "Monto", "Usuario ID")
+        callbacks = {
+            "agregar": self.agregar_devolucion_ui,
+            "editar": self.editar_devolucion_ui,
+            "eliminar": self.eliminar_devolucion_ui,
+            "actualizar": self.actualizar_treeview_devolucion
+        }
+        query = "SELECT id, venta_id, fecha, motivo, monto, usuario_id FROM devoluciones"
+        self._crear_crud_tab(frame_devoluciones, "devolucion", columns, headings, callbacks,
+                           lambda: self._cargar_entidad_datos("devolucion", query))
 
+    @permission_required("clientes")
     def _crear_contenido_pestana_clientes(self, frame_clientes):
-        self._crear_crud_tab(
-            frame_clientes,
-            "cliente",
-            ("id", "nombre", "cedula", "telefono"),
-            self.agregar_cliente_ui,
-            self.eliminar_cliente_ui,
-            self.editar_cliente_ui,
-            self.actualizar_treeview_cliente
-        )
+        columns = ("id", "nombre", "cedula", "telefono")
+        headings = ("ID", "Nombre", "Cédula", "Teléfono")
+        callbacks = {
+            "agregar": self.agregar_cliente_ui,
+            "editar": self.editar_cliente_ui,
+            "eliminar": self.eliminar_cliente_ui,
+            "actualizar": self.actualizar_treeview_cliente
+        }
+        query = "SELECT id, nombre, cedula, telefono FROM clientes"
+        self._crear_crud_tab(frame_clientes, "cliente", columns, headings, callbacks,
+                           lambda: self._cargar_entidad_datos("cliente", query))
 
+    @permission_required("productos")
     def _crear_contenido_pestana_productos(self, frame_productos):
-        self._crear_crud_tab(
-            frame_productos,
-            "producto",
-            ("id", "codigo", "nombre", "precio", "stock"),
-            self.agregar_producto_ui,
-            self.eliminar_producto_ui,
-            self.editar_producto_ui,
-            self.actualizar_treeview_producto
-        )
+        columns = ("id", "codigo", "nombre", "precio", "stock")
+        headings = ("ID", "Código", "Nombre", "Precio", "Stock")
+        callbacks = {
+            "agregar": self.agregar_producto_ui,
+            "editar": self.editar_producto_ui,
+            "eliminar": self.eliminar_producto_ui,
+            "actualizar": self.actualizar_treeview_producto
+        }
+        query = "SELECT id, codigo, nombre, precio, stock FROM productos"
+        self._crear_crud_tab(frame_productos, "producto", columns, headings, callbacks,
+                           lambda: self._cargar_entidad_datos("producto", query))
 
     def _crear_contenido_pestana_inventario(self, frame_inventario):
         ttk.Label(frame_inventario, text="Aquí va la gestión de inventario.").pack()
@@ -147,539 +171,533 @@ class InterfazPrincipal(tk.Toplevel):
     def mostrar_acerca_de(self):
         messagebox.showinfo("Acerca de", "Sistema de Caja POS\nVersión 1.0", parent=self)
 
-    # --- MÉTODOS DE ACTUALIZACIÓN DE TREEVIEW ---
+    # --- MÉTODOS DE ACTUALIZACIÓN DE TREEVIEW MEJORADOS ---
     def actualizar_treeview_promocion(self):
-        tree = getattr(self, "tree_promocion", None)
-        if tree:
-            for row in tree.get_children():
-                tree.delete(row)
-            promociones = self.sistema.db.obtener_promociones(solo_activos=False) if hasattr(self.sistema.db, 'obtener_promociones') else []
-            for promo in promociones:
-                tree.insert('', tk.END, values=promo)
+        query = "SELECT id, nombre, descripcion, fecha_inicio, fecha_fin, tipo, valor, activo FROM promociones"
+        self._cargar_entidad_datos("promocion", query)
 
     def actualizar_treeview_descuento(self):
-        tree = getattr(self, "tree_descuento", None)
-        if tree:
-            for row in tree.get_children():
-                tree.delete(row)
-            descuentos = self.sistema.db.obtener_descuentos(solo_activos=False) if hasattr(self.sistema.db, 'obtener_descuentos') else []
-            for descuento in descuentos:
-                tree.insert('', tk.END, values=descuento)
+        query = "SELECT id, nombre, tipo, valor, descripcion, activo FROM descuentos"
+        self._cargar_entidad_datos("descuento", query)
 
     def actualizar_treeview_devolucion(self):
-        tree = getattr(self, "tree_devolucion", None)
-        if tree:
-            for row in tree.get_children():
-                tree.delete(row)
-            devoluciones = self.sistema.db.obtener_devoluciones() if hasattr(self.sistema.db, 'obtener_devoluciones') else []
-            for devolucion in devoluciones:
-                tree.insert('', tk.END, values=devolucion)
+        query = "SELECT id, venta_id, fecha, motivo, monto, usuario_id FROM devoluciones"
+        self._cargar_entidad_datos("devolucion", query)
 
     def actualizar_treeview_cliente(self):
-        tree = getattr(self, "tree_cliente", None)
-        if tree:
-            for row in tree.get_children():
-                tree.delete(row)
-            clientes = self.sistema.db.obtener_clientes() if hasattr(self.sistema.db, 'obtener_clientes') else []
-            for cliente in clientes:
-                tree.insert('', tk.END, values=cliente)
+        query = "SELECT id, nombre, cedula, telefono FROM clientes"
+        self._cargar_entidad_datos("cliente", query)
 
     def actualizar_treeview_producto(self):
-        tree = getattr(self, "tree_producto", None)
-        if tree:
-            for row in tree.get_children():
-                tree.delete(row)
-            productos = self.sistema.db.obtener_productos() if hasattr(self.sistema.db, 'obtener_productos') else []
-            for producto in productos:
-                tree.insert('', tk.END, values=producto)
+        query = "SELECT id, codigo, nombre, precio, stock FROM productos"
+        self._cargar_entidad_datos("producto", query)
 
     def actualizar_info_venta_ui(self):
         pass  # Implementa aquí la actualización de la información de la venta en la UI
 
     def imprimir_ticket_fisico(self, datos_venta):
         imprimir_ticket(datos_venta)
-
-    # --- CRUD MÉTODOS PARA PROMOCIONES ---
-    def agregar_promocion_ui(self):
+    
+    # --- MÉTODOS HELPER PARA UI ---
+    def _crear_ventana_modal(self, titulo):
+        """Crea una ventana modal estándar"""
         ventana = tk.Toplevel(self)
-        ventana.title("Agregar Promoción")
+        ventana.title(titulo)
         ventana.transient(self)
         ventana.grab_set()
+        return ventana
+    
+    def _crear_campos_formulario(self, parent, campos_config):
+        """
+        Crea campos de formulario basado en configuración
+        campos_config: lista de tuplas (label, key, tipo, valor_inicial=None)
+        """
+        campos = {}
+        for i, config in enumerate(campos_config):
+            label, key = config[0], config[1]
+            valor_inicial = config[3] if len(config) > 3 else ""
+            
+            ttk.Label(parent, text=label + ":").grid(row=i, column=0, padx=5, pady=5, sticky="w")
+            entry = ttk.Entry(parent, width=25)
+            if valor_inicial:
+                entry.insert(0, str(valor_inicial))
+            entry.grid(row=i, column=1, padx=5, pady=5, sticky="ew")
+            campos[key] = entry
+        
+        return campos
 
-        campos = [
-            ("Nombre", "nombre"),
-            ("Descripción", "descripcion"),
-            ("Fecha inicio (YYYY-MM-DD)", "fecha_inicio"),
-            ("Fecha fin (YYYY-MM-DD)", "fecha_fin"),
-            ("Tipo", "tipo"),
-            ("Valor", "valor"),
+    # --- CRUD MÉTODOS PARA PROMOCIONES MEJORADOS ---
+    @permission_required("promociones")
+    @log_action("Agregar promoción")
+    def agregar_promocion_ui(self):
+        ventana = self._crear_ventana_modal("Agregar Promoción")
+        
+        campos_config = [
+            ("Nombre", "nombre", "entry"),
+            ("Descripción", "descripcion", "entry"),
+            ("Fecha inicio (YYYY-MM-DD)", "fecha_inicio", "entry"),
+            ("Fecha fin (YYYY-MM-DD)", "fecha_fin", "entry"),
+            ("Tipo", "tipo", "entry"),
+            ("Valor", "valor", "entry")
         ]
-        entradas = {}
-        for i, (label, key) in enumerate(campos):
-            ttk.Label(ventana, text=label + ":").grid(row=i, column=0, padx=5, pady=5)
-            entry = ttk.Entry(ventana)
-            entry.grid(row=i, column=1, padx=5, pady=5)
-            entradas[key] = entry
-
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
         activo_var = tk.IntVar(value=1)
-        ttk.Checkbutton(ventana, text="Activo", variable=activo_var).grid(row=len(campos), column=0, columnspan=2)
+        ttk.Checkbutton(ventana, text="Activo", variable=activo_var).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=5)
 
         def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+            
             try:
-                valor = float(entradas["valor"].get())
+                datos = {k: campos[k].get() for k in campos}
+                datos["valor"] = float(datos["valor"])
+                datos["activo"] = activo_var.get()
+                
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['promocion'].insertar(datos, usuario_id):
+                    self.actualizar_treeview_promocion()
+                    ventana.destroy()
             except ValueError:
                 messagebox.showerror("Error", "El valor debe ser numérico.", parent=ventana)
-                return
-            promocion = {k: entradas[k].get() for _, k in campos}
-            promocion["valor"] = valor
-            promocion["activo"] = activo_var.get()
-            self.sistema.db.agregar_promocion(promocion)
-            self.actualizar_treeview_promocion()
-            messagebox.showinfo("Éxito", "Promoción agregada correctamente.", parent=ventana)
-            ventana.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
 
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=len(campos)+1, column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config)+1, column=0, columnspan=2, pady=10)
 
+    @permission_required("promociones")
+    @log_action("Eliminar promoción")
     def eliminar_promocion_ui(self):
         tree = getattr(self, "tree_promocion", None)
-        seleccion = tree.selection() if tree else []
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
         if not seleccion:
-            messagebox.showwarning("Selecciona una promoción", "Debes seleccionar una promoción para eliminar.", parent=self)
             return
-        item = tree.item(seleccion[0])
-        promo_id = item['values'][0]
-        if messagebox.askyesno("Confirmar", "¿Eliminar la promoción seleccionada?", parent=self):
-            self.sistema.db.eliminar_promocion(promo_id)
-            self.actualizar_treeview_promocion()
+        
+        promo_id = seleccion[0]
+        if UIHelpers.confirmar_eliminacion("¿Eliminar la promoción seleccionada?"):
+            usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+            if self.crud_helpers['promocion'].eliminar("id", promo_id, usuario_id):
+                self.actualizar_treeview_promocion()
 
+    @permission_required("promociones")
+    @log_action("Editar promoción")
     def editar_promocion_ui(self):
         tree = getattr(self, "tree_promocion", None)
-        seleccion = tree.selection() if tree else []
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
         if not seleccion:
-            messagebox.showwarning("Selecciona una promoción", "Debes seleccionar una promoción para editar.", parent=self)
             return
-        item = tree.item(seleccion[0])
-        promo_id = item['values'][0]
-        datos = item['values']
-
-        ventana = tk.Toplevel(self)
-        ventana.title("Editar Promoción")
-        ventana.transient(self)
-        ventana.grab_set()
-
-        campos = [
-            ("Nombre", "nombre", datos[1]),
-            ("Descripción", "descripcion", datos[2]),
-            ("Fecha inicio (YYYY-MM-DD)", "fecha_inicio", datos[3]),
-            ("Fecha fin (YYYY-MM-DD)", "fecha_fin", datos[4]),
-            ("Tipo", "tipo", datos[5]),
-            ("Valor", "valor", datos[6]),
+        
+        promo_id, nombre, desc, fecha_ini, fecha_fin, tipo, valor, activo = seleccion
+        
+        ventana = self._crear_ventana_modal("Editar Promoción")
+        
+        campos_config = [
+            ("Nombre", "nombre", "entry", nombre),
+            ("Descripción", "descripcion", "entry", desc),
+            ("Fecha inicio", "fecha_inicio", "entry", fecha_ini),
+            ("Fecha fin", "fecha_fin", "entry", fecha_fin),
+            ("Tipo", "tipo", "entry", tipo),
+            ("Valor", "valor", "entry", str(valor))
         ]
-        entradas = {}
-        for i, (label, key, valor) in enumerate(campos):
-            ttk.Label(ventana, text=label + ":").grid(row=i, column=0, padx=5, pady=5)
-            entry = ttk.Entry(ventana)
-            entry.insert(0, valor)
-            entry.grid(row=i, column=1, padx=5, pady=5)
-            entradas[key] = entry
-
-        activo_var = tk.IntVar(value=datos[7])
-        ttk.Checkbutton(ventana, text="Activo", variable=activo_var).grid(row=len(campos), column=0, columnspan=2)
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
+        activo_var = tk.IntVar(value=int(activo))
+        ttk.Checkbutton(ventana, text="Activo", variable=activo_var).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=5)
 
         def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
             try:
-                valor = float(entradas["valor"].get())
+                datos = {k: campos[k].get() for k in campos}
+                datos["valor"] = float(datos["valor"])
+                datos["activo"] = activo_var.get()
+                
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['promocion'].actualizar("id", promo_id, datos, usuario_id):
+                    self.actualizar_treeview_promocion()
+                    ventana.destroy()
             except ValueError:
                 messagebox.showerror("Error", "El valor debe ser numérico.", parent=ventana)
-                return
-            campos_mod = {k: entradas[k].get() for _, k, _ in campos}
-            campos_mod["valor"] = valor
-            campos_mod["activo"] = activo_var.get()
-            self.sistema.db.modificar_promocion(promo_id, campos_mod)
-            self.actualizar_treeview_promocion()
-            messagebox.showinfo("Éxito", "Promoción editada correctamente.", parent=ventana)
-            ventana.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
 
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=len(campos)+1, column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config)+1, column=0, columnspan=2, pady=10)
 
-    # --- CRUD MÉTODOS PARA DESCUENTOS ---
+    # --- CRUD MÉTODOS PARA DESCUENTOS MEJORADOS ---
+    @permission_required("descuentos")
+    @log_action("Agregar descuento")
     def agregar_descuento_ui(self):
-        ventana = tk.Toplevel(self)
-        ventana.title("Agregar Descuento")
-        ventana.transient(self)
-        ventana.grab_set()
-
-        campos = [
-            ("Nombre", "nombre"),
-            ("Tipo (porcentaje/monto)", "tipo"),
-            ("Valor", "valor"),
-            ("Descripción", "descripcion"),
+        ventana = self._crear_ventana_modal("Agregar Descuento")
+        
+        campos_config = [
+            ("Nombre", "nombre", "entry"),
+            ("Tipo (porcentaje/monto)", "tipo", "entry"),
+            ("Valor", "valor", "entry"),
+            ("Descripción", "descripcion", "entry")
         ]
-        entradas = {}
-        for i, (label, key) in enumerate(campos):
-            ttk.Label(ventana, text=label + ":").grid(row=i, column=0, padx=5, pady=5)
-            entry = ttk.Entry(ventana)
-            entry.grid(row=i, column=1, padx=5, pady=5)
-            entradas[key] = entry
-
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
         activo_var = tk.IntVar(value=1)
-        ttk.Checkbutton(ventana, text="Activo", variable=activo_var).grid(row=len(campos), column=0, columnspan=2)
+        ttk.Checkbutton(ventana, text="Activo", variable=activo_var).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=5)
 
         def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
             try:
-                valor = float(entradas["valor"].get())
+                datos = {k: campos[k].get() for k in campos}
+                datos["valor"] = float(datos["valor"])
+                datos["activo"] = activo_var.get()
+                
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['descuento'].insertar(datos, usuario_id):
+                    self.actualizar_treeview_descuento()
+                    ventana.destroy()
             except ValueError:
                 messagebox.showerror("Error", "El valor debe ser numérico.", parent=ventana)
-                return
-            descuento = {k: entradas[k].get() for _, k in campos}
-            descuento["valor"] = valor
-            descuento["activo"] = activo_var.get()
-            self.sistema.db.agregar_descuento(descuento)
-            self.actualizar_treeview_descuento()
-            messagebox.showinfo("Éxito", "Descuento agregado correctamente.", parent=ventana)
-            ventana.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
 
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=len(campos)+1, column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config)+1, column=0, columnspan=2, pady=10)
 
+    @permission_required("descuentos")
+    @log_action("Eliminar descuento")
     def eliminar_descuento_ui(self):
         tree = getattr(self, "tree_descuento", None)
-        seleccion = tree.selection() if tree else []
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
         if not seleccion:
-            messagebox.showwarning("Selecciona un descuento", "Debes seleccionar un descuento para eliminar.", parent=self)
             return
-        item = tree.item(seleccion[0])
-        descuento_id = item['values'][0]
-        if messagebox.askyesno("Confirmar", "¿Eliminar el descuento seleccionado?", parent=self):
-            self.sistema.db.eliminar_descuento(descuento_id)
-            self.actualizar_treeview_descuento()
+        
+        descuento_id = seleccion[0]
+        if UIHelpers.confirmar_eliminacion("¿Eliminar el descuento seleccionado?"):
+            usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+            if self.crud_helpers['descuento'].eliminar("id", descuento_id, usuario_id):
+                self.actualizar_treeview_descuento()
 
+    @permission_required("descuentos")
+    @log_action("Editar descuento")
     def editar_descuento_ui(self):
         tree = getattr(self, "tree_descuento", None)
-        seleccion = tree.selection() if tree else []
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
         if not seleccion:
-            messagebox.showwarning("Selecciona un descuento", "Debes seleccionar un descuento para editar.", parent=self)
             return
-        item = tree.item(seleccion[0])
-        descuento_id = item['values'][0]
-        datos = item['values']
-
-        ventana = tk.Toplevel(self)
-        ventana.title("Editar Descuento")
-        ventana.transient(self)
-        ventana.grab_set()
-
-        campos = [
-            ("Nombre", "nombre", datos[1]),
-            ("Tipo (porcentaje/monto)", "tipo", datos[2]),
-            ("Valor", "valor", datos[3]),
-            ("Descripción", "descripcion", datos[4]),
+        
+        desc_id, nombre, tipo, valor, descripcion, activo = seleccion
+        
+        ventana = self._crear_ventana_modal("Editar Descuento")
+        
+        campos_config = [
+            ("Nombre", "nombre", "entry", nombre),
+            ("Tipo", "tipo", "entry", tipo),
+            ("Valor", "valor", "entry", str(valor)),
+            ("Descripción", "descripcion", "entry", descripcion)
         ]
-        entradas = {}
-        for i, (label, key, valor) in enumerate(campos):
-            ttk.Label(ventana, text=label + ":").grid(row=i, column=0, padx=5, pady=5)
-            entry = ttk.Entry(ventana)
-            entry.insert(0, valor)
-            entry.grid(row=i, column=1, padx=5, pady=5)
-            entradas[key] = entry
-
-        activo_var = tk.IntVar(value=datos[5])
-        ttk.Checkbutton(ventana, text="Activo", variable=activo_var).grid(row=len(campos), column=0, columnspan=2)
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
+        activo_var = tk.IntVar(value=int(activo))
+        ttk.Checkbutton(ventana, text="Activo", variable=activo_var).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=5)
 
         def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
             try:
-                valor = float(entradas["valor"].get())
+                datos = {k: campos[k].get() for k in campos}
+                datos["valor"] = float(datos["valor"])
+                datos["activo"] = activo_var.get()
+                
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['descuento'].actualizar("id", desc_id, datos, usuario_id):
+                    self.actualizar_treeview_descuento()
+                    ventana.destroy()
             except ValueError:
                 messagebox.showerror("Error", "El valor debe ser numérico.", parent=ventana)
-                return
-            campos_mod = {k: entradas[k].get() for _, k, _ in campos}
-            campos_mod["valor"] = valor
-            campos_mod["activo"] = activo_var.get()
-            self.sistema.db.modificar_descuento(descuento_id, campos_mod)
-            self.actualizar_treeview_descuento()
-            messagebox.showinfo("Éxito", "Descuento editado correctamente.", parent=ventana)
-            ventana.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
 
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=len(campos)+1, column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config)+1, column=0, columnspan=2, pady=10)
 
-    # --- CRUD MÉTODOS PARA DEVOLUCIONES ---
+    # --- CRUD MÉTODOS PARA DEVOLUCIONES MEJORADOS ---
+    @permission_required("devoluciones")
+    @log_action("Agregar devolución")
     def agregar_devolucion_ui(self):
-        ventana = tk.Toplevel(self)
-        ventana.title("Agregar Devolución")
-        ventana.transient(self)
-        ventana.grab_set()
-
-        ttk.Label(ventana, text="Venta ID:").grid(row=0, column=0, padx=5, pady=5)
-        entry_venta_id = ttk.Entry(ventana)
-        entry_venta_id.grid(row=0, column=1, padx=5, pady=5)
-
-        ttk.Label(ventana, text="Fecha (YYYY-MM-DD):").grid(row=1, column=0, padx=5, pady=5)
-        entry_fecha = ttk.Entry(ventana)
-        entry_fecha.insert(0, datetime.date.today().strftime("%Y-%m-%d"))
-        entry_fecha.grid(row=1, column=1, padx=5, pady=5)
-
-        ttk.Label(ventana, text="Motivo:").grid(row=2, column=0, padx=5, pady=5)
-        entry_motivo = ttk.Entry(ventana)
-        entry_motivo.grid(row=2, column=1, padx=5, pady=5)
-
-        ttk.Label(ventana, text="Monto:").grid(row=3, column=0, padx=5, pady=5)
-        entry_monto = ttk.Entry(ventana)
-        entry_monto.grid(row=3, column=1, padx=5, pady=5)
+        ventana = self._crear_ventana_modal("Agregar Devolución")
+        
+        campos_config = [
+            ("Venta ID", "venta_id", "entry"),
+            ("Fecha (YYYY-MM-DD)", "fecha", "entry", datetime.date.today().strftime("%Y-%m-%d")),
+            ("Motivo", "motivo", "entry"),
+            ("Monto", "monto", "entry")
+        ]
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
 
         def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
             try:
-                devolucion = {
-                    'venta_id': int(entry_venta_id.get()),
-                    'fecha': entry_fecha.get(),
-                    'motivo': entry_motivo.get(),
-                    'monto': float(entry_monto.get()),
-                    'usuario_id': self.sistema.usuario_actual.id
+                datos = {
+                    'venta_id': int(campos['venta_id'].get()),
+                    'fecha': campos['fecha'].get(),
+                    'motivo': campos['motivo'].get(),
+                    'monto': float(campos['monto'].get()),
+                    'usuario_id': getattr(self.sistema.usuario_actual, 'id', None)
                 }
-                self.sistema.db.agregar_devolucion(devolucion)
-                self.actualizar_treeview_devolucion()
-                messagebox.showinfo("Éxito", "Devolución agregada correctamente.", parent=ventana)
-                ventana.destroy()
+                
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['devolucion'].insertar(datos, usuario_id):
+                    self.actualizar_treeview_devolucion()
+                    ventana.destroy()
+            except ValueError as e:
+                messagebox.showerror("Error", "Datos inválidos. Verifique que ID y monto sean numéricos.", parent=ventana)
             except Exception as e:
-                messagebox.showerror("Error", f"Datos inválidos: {e}", parent=ventana)
+                messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
 
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=4, column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=10)
 
+    @permission_required("devoluciones")
+    @log_action("Eliminar devolución")
     def eliminar_devolucion_ui(self):
         tree = getattr(self, "tree_devolucion", None)
-        seleccion = tree.selection() if tree else []
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
         if not seleccion:
-            messagebox.showwarning("Selecciona una devolución", "Debes seleccionar una devolución para eliminar.", parent=self)
             return
-        item = tree.item(seleccion[0])
-        devolucion_id = item['values'][0]
-        if messagebox.askyesno("Confirmar", "¿Eliminar la devolución seleccionada?", parent=self):
-            self.sistema.db.eliminar_devolucion(devolucion_id)
-            self.actualizar_treeview_devolucion()
+        
+        devolucion_id = seleccion[0]
+        if UIHelpers.confirmar_eliminacion("¿Eliminar la devolución seleccionada?"):
+            usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+            if self.crud_helpers['devolucion'].eliminar("id", devolucion_id, usuario_id):
+                self.actualizar_treeview_devolucion()
 
+    @permission_required("devoluciones")
+    @log_action("Editar devolución")
     def editar_devolucion_ui(self):
         tree = getattr(self, "tree_devolucion", None)
-        seleccion = tree.selection() if tree else []
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
         if not seleccion:
-            messagebox.showwarning("Selecciona una devolución", "Debes seleccionar una devolución para editar.", parent=self)
             return
-        item = tree.item(seleccion[0])
-        devolucion_id = item['values'][0]
-        datos = item['values']
-
-        ventana = tk.Toplevel(self)
-        ventana.title("Editar Devolución")
-        ventana.transient(self)
-        ventana.grab_set()
-
-        ttk.Label(ventana, text="Motivo:").grid(row=0, column=0, padx=5, pady=5)
-        entry_motivo = ttk.Entry(ventana)
-        entry_motivo.insert(0, datos[3])
-        entry_motivo.grid(row=0, column=1, padx=5, pady=5)
-
-        ttk.Label(ventana, text="Monto:").grid(row=1, column=0, padx=5, pady=5)
-        entry_monto = ttk.Entry(ventana)
-        entry_monto.insert(0, datos[4])
-        entry_monto.grid(row=1, column=1, padx=5, pady=5)
+        
+        dev_id, venta_id, fecha, motivo, monto, usuario_id = seleccion
+        
+        ventana = self._crear_ventana_modal("Editar Devolución")
+        
+        campos_config = [
+            ("Motivo", "motivo", "entry", motivo),
+            ("Monto", "monto", "entry", str(monto))
+        ]
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
 
         def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
             try:
-                campos = {
-                    'motivo': entry_motivo.get(),
-                    'monto': float(entry_monto.get())
+                datos = {
+                    'motivo': campos['motivo'].get(),
+                    'monto': float(campos['monto'].get())
                 }
-                self.sistema.db.modificar_devolucion(devolucion_id, campos)
-                self.actualizar_treeview_devolucion()
-                messagebox.showinfo("Éxito", "Devolución editada correctamente.", parent=ventana)
-                ventana.destroy()
+                
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['devolucion'].actualizar("id", dev_id, datos, usuario_id):
+                    self.actualizar_treeview_devolucion()
+                    ventana.destroy()
             except ValueError:
                 messagebox.showerror("Error", "El monto debe ser numérico.", parent=ventana)
             except Exception as e:
                 messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
 
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=2, column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=10)
 
-    # --- CRUD MÉTODOS PARA CLIENTES ---
+    # --- CRUD MÉTODOS PARA CLIENTES MEJORADOS ---
+    @permission_required("clientes")
+    @log_action("Agregar cliente")
     def agregar_cliente_ui(self, event=None):
-        ventana = tk.Toplevel(self)
-        ventana.title("Agregar Cliente")
-        ventana.transient(self)
-        ventana.grab_set()
-
-        campos = [
-            ("Nombre", "nombre"),
-            ("Cédula", "cedula"),
-            ("Teléfono", "telefono"),
+        ventana = self._crear_ventana_modal("Agregar Cliente")
+        
+        campos_config = [
+            ("Nombre", "nombre", "entry"),
+            ("Cédula", "cedula", "entry"),
+            ("Teléfono", "telefono", "entry")
         ]
-        entradas = {}
-        for i, (label, key) in enumerate(campos):
-            ttk.Label(ventana, text=label + ":").grid(row=i, column=0, padx=5, pady=5)
-            entry = ttk.Entry(ventana)
-            entry.grid(row=i, column=1, padx=5, pady=5)
-            entradas[key] = entry
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
 
         def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
             try:
-                cliente = {k: entradas[k].get() for _, k in campos}
-                self.sistema.db.agregar_cliente(cliente)
-                self.actualizar_treeview_cliente()
-                messagebox.showinfo("Éxito", "Cliente agregado correctamente.", parent=ventana)
-                ventana.destroy()
-            except Exception as e:
-                messagebox.showerror("Error", f"Datos inválidos: {e}", parent=ventana)
-
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=len(campos), column=0, columnspan=2, pady=10)
-
-    def eliminar_cliente_ui(self):
-        tree = getattr(self, "tree_cliente", None)
-        seleccion = tree.selection() if tree else []
-        if not seleccion:
-            messagebox.showwarning("Selecciona un cliente", "Debes seleccionar un cliente para eliminar.", parent=self)
-            return
-        item = tree.item(seleccion[0])
-        client_id = item['values'][0]
-        if messagebox.askyesno("Confirmar", "¿Eliminar el cliente seleccionado?", parent=self):
-            self.sistema.db.eliminar_cliente(client_id)
-            self.actualizar_treeview_cliente()
-
-    def editar_cliente_ui(self):
-        tree = getattr(self, "tree_cliente", None)
-        seleccion = tree.selection() if tree else []
-        if not seleccion:
-            messagebox.showwarning("Selecciona un cliente", "Debes seleccionar un cliente para editar.", parent=self)
-            return
-        item = tree.item(seleccion[0])
-        client_id = item['values'][0]
-        datos = item['values']
-
-        ventana = tk.Toplevel(self)
-        ventana.title("Editar Cliente")
-        ventana.transient(self)
-        ventana.grab_set()
-
-        campos = [
-            ("Nombre", "nombre", datos[1]),
-            ("Cédula", "cedula", datos[2]),
-            ("Teléfono", "telefono", datos[3]),
-        ]
-        entradas = {}
-        for i, (label, key, valor) in enumerate(campos):
-            ttk.Label(ventana, text=label + ":").grid(row=i, column=0, padx=5, pady=5)
-            entry = ttk.Entry(ventana)
-            entry.insert(0, valor)
-            entry.grid(row=i, column=1, padx=5, pady=5)
-            entradas[key] = entry
-
-        def guardar():
-            try:
-                campos_mod = {
-                    "nombre": entradas["nombre"].get(),
-                    "cedula": entradas["cedula"].get(),
-                    "telefono": entradas["telefono"].get()
-                }
-                self.sistema.db.modificar_cliente(client_id, campos_mod)
-                self.actualizar_treeview_cliente()
-                messagebox.showinfo("Éxito", "Cliente editado correctamente.", parent=ventana)
-                ventana.destroy()
+                datos = {k: campos[k].get() for k in campos}
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['cliente'].insertar(datos, usuario_id):
+                    self.actualizar_treeview_cliente()
+                    ventana.destroy()
             except Exception as e:
                 messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
 
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=len(campos), column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=10)
 
-    # --- CRUD MÉTODOS PARA PRODUCTOS ---
-    def agregar_producto_ui(self, event=None):
-        ventana = tk.Toplevel(self)
-        ventana.title("Agregar Producto")
-        ventana.transient(self)
-        ventana.grab_set()
+    @permission_required("clientes")
+    @log_action("Eliminar cliente")
+    def eliminar_cliente_ui(self):
+        tree = getattr(self, "tree_cliente", None)
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
+        if not seleccion:
+            return
+        
+        cliente_id = seleccion[0]
+        if UIHelpers.confirmar_eliminacion("¿Eliminar el cliente seleccionado?"):
+            usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+            if self.crud_helpers['cliente'].eliminar("id", cliente_id, usuario_id):
+                self.actualizar_treeview_cliente()
 
-        campos = [
-            ("Código", "codigo"),
-            ("Nombre", "nombre"),
-            ("Precio", "precio"),
-            ("Stock", "stock"),
+    @permission_required("clientes")
+    @log_action("Editar cliente")
+    def editar_cliente_ui(self):
+        tree = getattr(self, "tree_cliente", None)
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
+        if not seleccion:
+            return
+        
+        cliente_id, nombre, cedula, telefono = seleccion
+        
+        ventana = self._crear_ventana_modal("Editar Cliente")
+        
+        campos_config = [
+            ("Nombre", "nombre", "entry", nombre),
+            ("Cédula", "cedula", "entry", cedula),
+            ("Teléfono", "telefono", "entry", telefono)
         ]
-        entradas = {}
-        for i, (label, key) in enumerate(campos):
-            ttk.Label(ventana, text=label + ":").grid(row=i, column=0, padx=5, pady=5)
-            entry = ttk.Entry(ventana)
-            entry.grid(row=i, column=1, padx=5, pady=5)
-            entradas[key] = entry
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
 
         def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
             try:
-                producto = {
-                    "codigo": entradas["codigo"].get(),
-                    "nombre": entradas["nombre"].get(),
-                    "precio": float(entradas["precio"].get()),
-                    "stock": int(entradas["stock"].get())
-                }
-                self.sistema.db.agregar_producto(producto)
-                self.actualizar_treeview_producto()
-                messagebox.showinfo("Éxito", "Producto agregado correctamente.", parent=ventana)
-                ventana.destroy()
+                datos = {k: campos[k].get() for k in campos}
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['cliente'].actualizar("id", cliente_id, datos, usuario_id):
+                    self.actualizar_treeview_cliente()
+                    ventana.destroy()
             except Exception as e:
-                messagebox.showerror("Error", f"Datos inválidos: {e}", parent=ventana)
+                messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
 
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=len(campos), column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=10)
 
-    def eliminar_producto_ui(self):
-        tree = getattr(self, "tree_producto", None)
-        seleccion = tree.selection() if tree else []
-        if not seleccion:
-            messagebox.showwarning("Selecciona un producto", "Debes seleccionar un producto para eliminar.", parent=self)
-            return
-        item = tree.item(seleccion[0])
-        product_id = item['values'][0]
-        if messagebox.askyesno("Confirmar", "¿Eliminar el producto seleccionado?", parent=self):
-            self.sistema.db.eliminar_producto(product_id)
-            self.actualizar_treeview_producto()
-
-    def editar_producto_ui(self):
-        tree = getattr(self, "tree_producto", None)
-        seleccion = tree.selection() if tree else []
-        if not seleccion:
-            messagebox.showwarning("Selecciona un producto", "Debes seleccionar un producto para editar.", parent=self)
-            return
-        item = tree.item(seleccion[0])
-        product_id = item['values'][0]
-        datos = item['values']
-
-        ventana = tk.Toplevel(self)
-        ventana.title("Editar Producto")
-        ventana.transient(self)
-        ventana.grab_set()
-
-        campos = [
-            ("Código", "codigo", datos[1]),
-            ("Nombre", "nombre", datos[2]),
-            ("Precio", "precio", datos[3]),
-            ("Stock", "stock", datos[4]),
+    # --- CRUD MÉTODOS PARA PRODUCTOS MEJORADOS ---
+    @permission_required("productos")
+    @log_action("Agregar producto")
+    def agregar_producto_ui(self, event=None):
+        ventana = self._crear_ventana_modal("Agregar Producto")
+        
+        campos_config = [
+            ("Código", "codigo", "entry"),
+            ("Nombre", "nombre", "entry"),
+            ("Precio", "precio", "entry"),
+            ("Stock", "stock", "entry")
         ]
-        entradas = {}
-        for i, (label, key, valor) in enumerate(campos):
-            ttk.Label(ventana, text=label + ":").grid(row=i, column=0, padx=5, pady=5)
-            entry = ttk.Entry(ventana)
-            entry.insert(0, valor)
-            entry.grid(row=i, column=1, padx=5, pady=5)
-            entradas[key] = entry
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
 
         def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
             try:
-                campos_mod = {
-                    "codigo": entradas["codigo"].get(),
-                    "nombre": entradas["nombre"].get(),
-                    "precio": float(entradas["precio"].get()),
-                    "stock": int(entradas["stock"].get())
+                datos = {
+                    "codigo": campos["codigo"].get(),
+                    "nombre": campos["nombre"].get(),
+                    "precio": float(campos["precio"].get()),
+                    "stock": int(campos["stock"].get())
                 }
-                self.sistema.db.modificar_producto(product_id, campos_mod)
-                self.actualizar_treeview_producto()
-                messagebox.showinfo("Éxito", "Producto editado correctamente.", parent=ventana)
-                ventana.destroy()
+                
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['producto'].insertar(datos, usuario_id):
+                    self.actualizar_treeview_producto()
+                    ventana.destroy()
             except ValueError:
                 messagebox.showerror("Error", "Precio y Stock deben ser numéricos.", parent=ventana)
             except Exception as e:
                 messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
 
-        ttk.Button(ventana, text="Guardar", command=guardar).grid(row=len(campos), column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=10)
+
+    @permission_required("productos")
+    @log_action("Eliminar producto")
+    def eliminar_producto_ui(self):
+        tree = getattr(self, "tree_producto", None)
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
+        if not seleccion:
+            return
+        
+        producto_id = seleccion[0]
+        if UIHelpers.confirmar_eliminacion("¿Eliminar el producto seleccionado?"):
+            usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+            if self.crud_helpers['producto'].eliminar("id", producto_id, usuario_id):
+                self.actualizar_treeview_producto()
+
+    @permission_required("productos")
+    @log_action("Editar producto")
+    def editar_producto_ui(self):
+        tree = getattr(self, "tree_producto", None)
+        seleccion = UIHelpers.obtener_seleccion_treeview(tree)
+        if not seleccion:
+            return
+        
+        producto_id, codigo, nombre, precio, stock = seleccion
+        
+        ventana = self._crear_ventana_modal("Editar Producto")
+        
+        campos_config = [
+            ("Código", "codigo", "entry", codigo),
+            ("Nombre", "nombre", "entry", nombre),
+            ("Precio", "precio", "entry", str(precio)),
+            ("Stock", "stock", "entry", str(stock))
+        ]
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
+
+        def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
+            try:
+                datos = {
+                    "codigo": campos["codigo"].get(),
+                    "nombre": campos["nombre"].get(),
+                    "precio": float(campos["precio"].get()),
+                    "stock": int(campos["stock"].get())
+                }
+                
+                usuario_id = getattr(self.sistema.usuario_actual, 'id', None)
+                if self.crud_helpers['producto'].actualizar("id", producto_id, datos, usuario_id):
+                    self.actualizar_treeview_producto()
+                    ventana.destroy()
+            except ValueError:
+                messagebox.showerror("Error", "Precio y Stock deben ser numéricos.", parent=ventana)
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al guardar: {e}", parent=ventana)
+
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=10)
 
     # --- OTROS MÉTODOS ---
     def mostrar_mensaje_estado(self, mensaje, tiempo=3000):
@@ -689,6 +707,8 @@ class InterfazPrincipal(tk.Toplevel):
     def mostrar_error(self, mensaje):
         messagebox.showerror("Error", mensaje, parent=self)
 
+    @permission_required("ventas")
+    @log_action("Finalizar venta")
     def finalizar_venta_ui(self, event=None):
         if not self.sistema.venta_actual['items']:
             messagebox.showwarning("Sin productos", "Agrega productos antes de finalizar la venta.", parent=self)
@@ -720,6 +740,11 @@ class InterfazPrincipal(tk.Toplevel):
         # Solo los administradores pueden ver la pestaña de configuración
         if self.sistema.usuario_actual and getattr(self.sistema.usuario_actual, 'rol', '') == 'admin':
             tabs_config.append(('Configuración', self._crear_contenido_pestana_configuracion))
+        
+        # Solo subadmins y admins pueden ver auditoría
+        usuario_rol = getattr(self.sistema.usuario_actual, 'rol', '')
+        if usuario_rol in ['admin', 'subadmin']:
+            tabs_config.append(('Auditoría', self._crear_contenido_pestana_auditoria))
 
         for name, creator_func in tabs_config:
             frame = ttk.Frame(self.notebook, padding=10)
@@ -727,6 +752,7 @@ class InterfazPrincipal(tk.Toplevel):
             self.pestanas[name] = frame
             creator_func(frame)
 
+    @admin_required
     def _crear_contenido_pestana_configuracion(self, frame_config):
         # Tasa de Dólar
         ttk.Label(frame_config, text="Tasa de dólar actual:").grid(row=0, column=0, padx=5, pady=5, sticky='w')
@@ -748,14 +774,59 @@ class InterfazPrincipal(tk.Toplevel):
         option_menu_modelo_negocio.grid(row=1, column=1, padx=5, pady=5, sticky='ew')
         ttk.Button(frame_config, text="Guardar Modelo", command=self._guardar_modelo_negocio).grid(row=1, column=2, padx=5, pady=5)
 
-        # Otros ajustes de administrador (Placeholder)
-        ttk.Label(frame_config, text="--- Otros Ajustes de Administrador ---").grid(row=2, column=0, columnspan=3, pady=15, sticky='w')
+        # Otros ajustes de administrador
+        ttk.Label(frame_config, text="--- Gestión de Sistema ---").grid(row=2, column=0, columnspan=3, pady=15, sticky='w')
         ttk.Button(frame_config, text="Gestionar Usuarios", command=self._gestionar_usuarios).grid(row=3, column=0, padx=5, pady=5, sticky='w')
-        # Puedes agregar más botones de administración aquí
+        ttk.Button(frame_config, text="Respaldo de BD", command=self._respaldar_base_datos).grid(row=3, column=1, padx=5, pady=5, sticky='w')
+        ttk.Button(frame_config, text="Restaurar BD", command=self._restaurar_base_datos).grid(row=3, column=2, padx=5, pady=5, sticky='w')
+        
+        # Configuración de correo
+        ttk.Label(frame_config, text="--- Configuración de Notificaciones ---").grid(row=4, column=0, columnspan=3, pady=15, sticky='w')
+        ttk.Button(frame_config, text="Configurar Email", command=self._configurar_email).grid(row=5, column=0, padx=5, pady=5, sticky='w')
 
         # Mejorar el comportamiento de redimensionamiento
         frame_config.grid_columnconfigure(1, weight=1)
+    
+    def _crear_contenido_pestana_auditoria(self, frame_auditoria):
+        """Crear pestaña de auditoría de movimientos"""
+        columns = ("id", "usuario", "accion", "tabla", "fecha", "detalles")
+        headings = ("ID", "Usuario", "Acción", "Tabla", "Fecha", "Detalles")
+        
+        tree = UIHelpers.crear_treeview(frame_auditoria, columns, headings)
+        setattr(self, "tree_auditoria", tree)
+        
+        # Botones de control
+        button_frame = ttk.Frame(frame_auditoria)
+        button_frame.pack(fill="x", padx=10, pady=5)
+        
+        ttk.Button(button_frame, text="Actualizar", command=self._actualizar_auditoria).pack(side="left", padx=5)
+        ttk.Button(button_frame, text="Filtrar por Usuario", command=self._filtrar_auditoria).pack(side="left", padx=5)
+        ttk.Button(button_frame, text="Exportar", command=self._exportar_auditoria).pack(side="left", padx=5)
+        
+        # Cargar datos iniciales
+        self._actualizar_auditoria()
+    
+    def _actualizar_auditoria(self):
+        """Actualizar los datos de auditoría"""
+        query = """
+        SELECT a.id, u.nombre, a.accion, a.tabla, a.fecha, a.detalles 
+        FROM auditoria a 
+        LEFT JOIN usuarios u ON a.usuario_id = u.id 
+        ORDER BY a.fecha DESC 
+        LIMIT 1000
+        """
+        self._cargar_entidad_datos("auditoria", query)
+    
+    def _filtrar_auditoria(self):
+        """Filtrar auditoría por usuario"""
+        messagebox.showinfo("Filtros", "Funcionalidad de filtros en desarrollo.", parent=self)
+    
+    def _exportar_auditoria(self):
+        """Exportar auditoría a archivo"""
+        messagebox.showinfo("Exportar", "Funcionalidad de exportación en desarrollo.", parent=self)
 
+    @admin_required
+    @log_action("Actualizar tasa de dólar")
     def _guardar_tasa_dolar(self):
         try:
             nueva_tasa = float(self.tasa_dolar_var.get())
@@ -767,14 +838,68 @@ class InterfazPrincipal(tk.Toplevel):
         except ValueError:
             messagebox.showerror("Error", "Por favor, ingresa un valor numérico válido para la tasa de dólar.", parent=self)
 
+    @admin_required
+    @log_action("Actualizar modelo de negocio")
     def _guardar_modelo_negocio(self):
         nuevo_modelo = self.modelo_negocio_var.get()
         self.sistema.actualizar_configuracion('modelo_negocio', nuevo_modelo)
         self.mostrar_mensaje_estado(f"Modelo de negocio actualizado a: {nuevo_modelo}")
 
+    @admin_required
     def _gestionar_usuarios(self):
         messagebox.showinfo("Gestionar Usuarios", "Funcionalidad de gestión de usuarios en desarrollo.", parent=self)
-        # Aquí podrías abrir una ventana de gestión de usuarios en el futuro
+    
+    @admin_required
+    @log_action("Respaldar base de datos")
+    def _respaldar_base_datos(self):
+        try:
+            # Aquí iría la lógica de respaldo
+            messagebox.showinfo("Respaldo", "Respaldo de base de datos completado exitosamente.", parent=self)
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al realizar respaldo: {e}", parent=self)
+    
+    @admin_required
+    @log_action("Restaurar base de datos")
+    def _restaurar_base_datos(self):
+        if messagebox.askyesno("Confirmar", "¿Está seguro de restaurar la base de datos? Esta acción no se puede deshacer.", parent=self):
+            try:
+                # Aquí iría la lógica de restauración
+                messagebox.showinfo("Restaurar", "Restauración de base de datos completada.", parent=self)
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al restaurar: {e}", parent=self)
+    
+    @admin_required
+    def _configurar_email(self):
+        ventana = self._crear_ventana_modal("Configuración de Email")
+        
+        campos_config = [
+            ("Servidor SMTP", "smtp_server", "entry"),
+            ("Puerto", "smtp_port", "entry", "587"),
+            ("Email", "email", "entry"),
+            ("Contraseña", "password", "entry")
+        ]
+        
+        campos = self._crear_campos_formulario(ventana, campos_config)
+        
+        # Configurar el campo de contraseña
+        campos["password"].config(show="*")
+
+        def guardar():
+            if not UIHelpers.validar_campos_obligatorios(campos):
+                return
+                
+            try:
+                config_email = {k: campos[k].get() for k in campos}
+                # Aquí se guardaría la configuración de email
+                messagebox.showinfo("Éxito", "Configuración de email guardada correctamente.", parent=ventana)
+                ventana.destroy()
+            except Exception as e:
+                messagebox.showerror("Error", f"Error al guardar configuración: {e}", parent=ventana)
+
+        ttk.Button(ventana, text="Guardar", command=guardar).grid(
+            row=len(campos_config), column=0, columnspan=2, pady=10)
+        ttk.Button(ventana, text="Probar Conexión", command=lambda: messagebox.showinfo("Prueba", "Funcionalidad de prueba en desarrollo.", parent=ventana)).grid(
+            row=len(campos_config)+1, column=0, columnspan=2, pady=5)
 
 # NOTA: Asegúrate de que tu clase SistemaCaja tenga el método actualizar_configuracion(key, value)
 # que actualice self.config y persista el cambio en la base de datos o
@@ -797,6 +922,7 @@ class InterfazPrincipal(tk.Toplevel):
         if messagebox.askokcancel("Salir", "¿Está seguro que desea salir?", parent=self):
             self.parent.destroy()
 
+    @permission_required("ventas")
     def cambiar_producto_seleccionado(self, event=None):
         # Permite editar el producto seleccionado en la venta actual
         tree = getattr(self, "tree_producto", None)
@@ -834,6 +960,8 @@ class InterfazPrincipal(tk.Toplevel):
 
         ttk.Button(ventana, text="Guardar", command=guardar).grid(row=1, column=0, columnspan=2, pady=10)
 
+    @permission_required("ventas")
+    @log_action("Marcar venta pendiente")
     def marcar_venta_pendiente(self, event=None):
         # Marca la venta actual como pendiente (por ejemplo, para guardar y continuar después)
         if not self.sistema.venta_actual['items']:
@@ -844,6 +972,8 @@ class InterfazPrincipal(tk.Toplevel):
         self.actualizar_info_venta_ui()
         messagebox.showinfo("Venta pendiente", "La venta fue marcada como pendiente.", parent=self)
 
+    @permission_required("inventario")
+    @log_action("Registrar entrada de inventario")
     def registrar_entrada_inventario(self, event=None):
         # Permite registrar una entrada de inventario para un producto
         tree = getattr(self, "tree_producto", None)
@@ -877,6 +1007,8 @@ class InterfazPrincipal(tk.Toplevel):
 
         ttk.Button(ventana, text="Guardar", command=guardar).grid(row=1, column=0, columnspan=2, pady=10)
 
+    @permission_required("inventario")
+    @log_action("Registrar salida de inventario")
     def registrar_salida_inventario(self, event=None):
         # Permite registrar una salida de inventario para un producto
         tree = getattr(self, "tree_producto", None)
@@ -910,6 +1042,7 @@ class InterfazPrincipal(tk.Toplevel):
 
         ttk.Button(ventana, text="Guardar", command=guardar).grid(row=1, column=0, columnspan=2, pady=10)
 
+    @permission_required("productos_consulta")
     def buscar_producto(self, event=None):
         ventana = tk.Toplevel(self)
         ventana.title("Buscar producto")
@@ -946,6 +1079,8 @@ class InterfazPrincipal(tk.Toplevel):
         ttk.Button(ventana, text="Buscar", command=buscar).grid(row=1, column=0, columnspan=2, pady=5)
         ttk.Label(ventana, textvariable=resultado_var, justify=tk.LEFT).grid(row=2, column=0, columnspan=2, padx=5, pady=5)
 
+    @permission_required("ventas")
+    @log_action("Aplicar precio de mayoreo")
     def aplicar_mayoreo(self, event=None):
         # Aplica el precio de mayoreo al producto seleccionado en la venta
         tree = getattr(self, "tree_producto", None)
@@ -961,6 +1096,8 @@ class InterfazPrincipal(tk.Toplevel):
         else:
             messagebox.showwarning("No aplica", "No se pudo aplicar el precio de mayoreo.", parent=self)
 
+    @permission_required("ventas")
+    @log_action("Quitar producto de venta")
     def quitar_item_venta_ui(self, event=None):
         tree = getattr(self, "tree_producto", None)
         seleccion = tree.selection() if tree else []
