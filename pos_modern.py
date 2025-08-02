@@ -12,8 +12,13 @@ from PIL import Image, ImageTk
 class ModernPOSApp:
     """Aplicación POS moderna con diseño estilo Eleventa"""
     
-    def __init__(self):
-        self.current_user = {'full_name': 'Administrador', 'username': 'admin', 'role_name': 'Administrador'}
+    def __init__(self, user_data=None):
+        # Usuario autenticado requerido
+        if not user_data:
+            messagebox.showerror("Error", "Debe iniciar sesión para usar la aplicación")
+            return
+            
+        self.current_user = user_data
         self.logo_photo = None
         self.sale_items = []
         self.sale_total = 0.0
@@ -190,7 +195,8 @@ class ModernPOSApp:
         # Botones principales (estilo Eleventa)
         buttons_config = [
             ("🛒 F1 Ventas", self.show_ventas, '#3498db'),
-            ("👥 F2 Clientes", self.show_clientes, '#27ae60'),
+            ("� Cuentas Simples", self.show_simple_accounts, '#16a085'),
+            ("�👥 F2 Clientes", self.show_clientes, '#27ae60'),
             ("📦 F3 Productos", self.show_productos, '#e67e22'),
             ("📊 F4 Inventario", self.show_inventario, '#9b59b6'),
             ("🔍 F5 Buscar", self.show_buscar, '#1abc9c'),
@@ -200,7 +206,7 @@ class ModernPOSApp:
             ("⚙️ Configuración", self.show_configuracion, '#95a5a6'),
             ("📋 Facturas", self.show_facturas, '#f39c12'),
             ("✂️ Corte", self.show_corte, '#e74c3c'),
-            ("� Reportes", self.show_reportes, '#2c3e50')
+            ("📊 Reportes", self.show_reportes, '#2c3e50')
         ]
         
         for i, (text, command, color) in enumerate(buttons_config):
@@ -455,7 +461,14 @@ class ModernPOSApp:
     
     def show_clientes(self):
         """Muestra gestión de clientes"""
-        messagebox.showinfo("Módulo", "Gestión de Clientes")
+        try:
+            from ui.ui_customers import CustomersWindow
+            CustomersWindow(self.root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al abrir gestión de clientes:\n{str(e)}")
+            print(f"Error clientes: {e}")
+            import traceback
+            traceback.print_exc()
     
     def show_productos(self):
         """Muestra gestión de productos"""
@@ -473,9 +486,25 @@ class ModernPOSApp:
         except Exception as e:
             messagebox.showerror("Error", f"Error al abrir gestión de inventario:\n{str(e)}")
     
+    def show_simple_accounts(self):
+        """Muestra el gestor simple de cuentas - Solo abre y cierra"""
+        try:
+            from ui.ui_simple_sales import SimpleAccountManager
+            SimpleAccountManager(self.root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al abrir gestor de cuentas:\n{str(e)}")
+            print(f"Error cuentas simples: {e}")
+    
     def show_configuracion(self):
-        """Muestra configuración"""
-        messagebox.showinfo("Módulo", "Configuración del Sistema")
+        """Muestra configuración con mejor contraste"""
+        try:
+            from ui.ui_configuration_mejorada import ConfigurationWindow
+            ConfigurationWindow(self.root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al abrir configuración:\n{str(e)}")
+            print(f"Error configuración: {e}")
+            import traceback
+            traceback.print_exc()
     
     def show_facturas(self):
         """Muestra facturas"""
@@ -487,11 +516,25 @@ class ModernPOSApp:
     
     def show_corte(self):
         """Muestra corte de caja"""
-        messagebox.showinfo("Módulo", "Corte de Caja")
+        try:
+            from ui.ui_cash_close import CashCloseWindow
+            CashCloseWindow(self.root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al abrir corte de caja:\n{str(e)}")
+            print(f"Error corte de caja: {e}")
+            import traceback
+            traceback.print_exc()
     
     def show_reportes(self):
         """Muestra reportes"""
-        messagebox.showinfo("Módulo", "Reportes del Sistema")
+        try:
+            from ui.ui_reports import ReportsWindow
+            ReportsWindow(self.root)
+        except Exception as e:
+            messagebox.showerror("Error", f"Error al abrir reportes:\n{str(e)}")
+            print(f"Error reportes: {e}")
+            import traceback
+            traceback.print_exc()
     
     def show_varios(self):
         """Muestra productos varios"""
@@ -1111,12 +1154,34 @@ class ModernPOSApp:
         self.root.mainloop()
 
 def main():
-    """Función principal"""
+    """Función principal con autenticación segura"""
     try:
-        app = ModernPOSApp()
-        app.run()
+        # Importar sistema de login
+        from login_secure import authenticate_user
+        
+        print("🔐 Iniciando sistema de autenticación...")
+        
+        # Autenticar usuario
+        user_data = authenticate_user()
+        
+        if user_data:
+            print(f"✅ Usuario autenticado: {user_data['full_name']} ({user_data['role']})")
+            
+            # Iniciar aplicación con usuario autenticado
+            app = ModernPOSApp(user_data)
+            if hasattr(app, 'root'):  # Verificar que se creó correctamente
+                app.run()
+            else:
+                print("❌ Error creando aplicación")
+        else:
+            print("❌ Autenticación cancelada")
+            
+    except KeyboardInterrupt:
+        print("\n👋 Saliendo...")
     except Exception as e:
-        print(f"Error iniciando aplicación: {e}")
+        print(f"❌ Error iniciando aplicación: {e}")
+        import traceback
+        traceback.print_exc()
         messagebox.showerror("Error Fatal", f"No se pudo iniciar la aplicación:\n{str(e)}")
 
 if __name__ == "__main__":

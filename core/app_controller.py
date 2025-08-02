@@ -1,7 +1,7 @@
 import sys
 import os
 import tkinter as tk
-from ui.ui_login import InterfazLogin
+from ui.ui_login import LoginUI
 from ui.ui_main import InterfazPrincipal
 from core.sistema import SistemaCaja
 from core.database import DatabaseManager
@@ -20,13 +20,14 @@ class AppController:
         self.ventana_actual = None
 
     def mostrar_ventana_login(self):
-        if self.ventana_actual and self.ventana_actual.winfo_exists():
-            self.ventana_actual.destroy()
-        self.ventana_actual = InterfazLogin(self.root_app_tk, self.al_completar_login, self.sistema_caja)
+        if self.ventana_actual and hasattr(self.ventana_actual, 'window') and self.ventana_actual.window.winfo_exists():
+            self.ventana_actual.window.destroy()
+        self.ventana_actual = LoginUI(self.root_app_tk, self.al_completar_login)
+        self.ventana_actual.create_login_window()
 
     def al_completar_login(self):
-        if self.ventana_actual and self.ventana_actual.winfo_exists():
-            self.ventana_actual.destroy()
+        if self.ventana_actual and hasattr(self.ventana_actual, 'window') and self.ventana_actual.window.winfo_exists():
+            self.ventana_actual.window.destroy()
         self.ventana_actual = InterfazPrincipal(self.root_app_tk, self.sistema_caja)
 
     def iniciar_app(self):

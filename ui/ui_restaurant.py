@@ -1,6 +1,7 @@
 """
-Interfaz de Usuario para Sistema de Restaurante
-Gestión completa de mesas, cuentas activas, menú y órdenes de cocina
+Interfaz de Usuario para Sistema de Restaurante COMPLETO
+Gestión completa de mesas, cuentas activas, menú, órdenes y FACTURACIÓN
+Sistema de apertura/cierre de cuentas con facturación automática
 """
 
 import tkinter as tk
@@ -8,15 +9,16 @@ from tkinter import ttk, messagebox
 import threading
 from datetime import datetime, timedelta
 import json
+import os
 from modules.restaurant.restaurant_manager import RestaurantManager
 
 class RestaurantWindow:
     def __init__(self, parent):
         self.parent = parent
         self.window = tk.Toplevel(parent)
-        self.window.title("🍽️ Gestión de Restaurante - Caja Central POS")
+        self.window.title("🍽️ Sistema de Restaurante COMPLETO - Caja Central POS")
         self.window.geometry("1600x900")
-        self.window.configure(bg='#f8f9fa')
+        self.window.configure(bg='#0f766e')  # Verde turquesa de fondo
         self.window.resizable(True, True)
         
         # Manager
@@ -25,6 +27,10 @@ class RestaurantWindow:
         # Variables
         self.selected_table = None
         self.current_order_items = []
+        self.active_accounts = {}  # Cuentas activas por mesa
+        
+        # Cargar logo
+        self.load_logo()
         
         # Centrar ventana
         self.window.transient(parent)
@@ -33,8 +39,22 @@ class RestaurantWindow:
         self.setup_ui()
         self.load_initial_data()
         
-        # Auto-actualizar cada 15 segundos
+        # Auto-actualizar cada 10 segundos
         self.auto_refresh()
+    
+    def load_logo(self):
+        """Carga el logo si está disponible"""
+        try:
+            from core.brand_manager import get_brand_manager
+            brand_manager = get_brand_manager()
+            logo = brand_manager.get_logo("small")
+            if logo:
+                from PIL import ImageTk
+                self.logo_photo = ImageTk.PhotoImage(logo)
+            else:
+                self.logo_photo = None
+        except:
+            self.logo_photo = None
     
     def setup_ui(self):
         """Crear interfaz de usuario"""
@@ -45,17 +65,22 @@ class RestaurantWindow:
         self.create_main_layout()
     
     def create_header(self):
-        """Crear header de la ventana"""
-        header_frame = tk.Frame(self.window, bg='#2c3e50', height=80)
+        """Crear header de la ventana con verde turquesa"""
+        header_frame = tk.Frame(self.window, bg='#14b8a6', height=80)  # Verde turquesa
         header_frame.pack(fill=tk.X)
         header_frame.pack_propagate(False)
         
-        header_content = tk.Frame(header_frame, bg='#2c3e50')
+        header_content = tk.Frame(header_frame, bg='#14b8a6')
         header_content.pack(expand=True, fill=tk.BOTH, padx=20, pady=15)
         
+        # Logo si está disponible
+        if hasattr(self, 'logo_photo') and self.logo_photo:
+            logo_label = tk.Label(header_content, image=self.logo_photo, bg='#14b8a6')
+            logo_label.pack(side=tk.LEFT, padx=(0, 20))
+        
         # Título
-        title_label = tk.Label(header_content, text="🍽️ Sistema de Restaurante", 
-                              font=('Segoe UI', 18, 'bold'), fg='white', bg='#2c3e50')
+        title_label = tk.Label(header_content, text="🍽️ Sistema de Restaurante COMPLETO", 
+                              font=('Segoe UI', 18, 'bold'), fg='white', bg='#14b8a6')
         title_label.pack(side=tk.LEFT)
         
         # Información del día

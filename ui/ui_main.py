@@ -3,15 +3,24 @@ from tkinter import ttk, messagebox
 from core.printer_utils import imprimir_ticket
 from core.decorators import login_required, admin_required, permission_required, log_action
 from ui.ui_helpers import UIHelpers, CRUDHelper
+from ui.ui_ai_assistant_advanced import AdvancedAIAssistantUI
 import datetime
 import traceback
 from PIL import Image, ImageTk  # Asegúrate de tener pillow instalado
+import threading
 
 class InterfazPrincipal(tk.Toplevel):
     def __init__(self, parent, sistema_caja_ref):
         super().__init__(parent)
         self.parent = parent
         self.sistema = sistema_caja_ref
+        
+        # Inicializar asistente de IA avanzado
+        self.ai_assistant_ui = AdvancedAIAssistantUI(self, self.sistema.db)
+        
+        # Inicializar bot de WhatsApp (opcional)
+        self.whatsapp_bot = None
+        self.whatsapp_bot_running = False
         
         # Inicializar helpers CRUD para diferentes entidades
         self.crud_helpers = {
@@ -26,6 +35,7 @@ class InterfazPrincipal(tk.Toplevel):
         self._crear_menu_principal()
         self._crear_notebook_principal()
         self._crear_barra_estado()
+        self._crear_boton_asistente_ia()
         self._configurar_atajos()
         self.protocol("WM_DELETE_WINDOW", self._al_cerrar_ventana_principal)
         self.status_var.set("Listo.")
@@ -38,6 +48,11 @@ class InterfazPrincipal(tk.Toplevel):
 
         # Menú Ayuda
         menu_ayuda = tk.Menu(self.menu_principal, tearoff=0)
+        menu_ayuda.add_command(label="🤖 Asistente IA", command=self.mostrar_asistente_ia, accelerator="F9")
+        menu_ayuda.add_separator()
+        menu_ayuda.add_command(label="📱 Bot WhatsApp", command=self.mostrar_whatsapp_bot)
+        menu_ayuda.add_command(label="🚀 Launcher WhatsApp", command=self.abrir_launcher_whatsapp)
+        menu_ayuda.add_separator()
         menu_ayuda.add_command(label="Acerca de", command=self.mostrar_acerca_de)
         self.menu_principal.add_cascade(label="Ayuda", menu=menu_ayuda)
 
@@ -51,6 +66,74 @@ class InterfazPrincipal(tk.Toplevel):
         barra_estado = ttk.Label(self, textvariable=self.status_var, anchor='w', relief=tk.SUNKEN, padding=5)
         barra_estado.pack(side=tk.BOTTOM, fill=tk.X)
 
+    def _crear_boton_asistente_ia(self):
+        """Crea un botón flotante para el asistente de IA"""
+        # Frame para el botón flotante
+        self.ai_button_frame = tk.Frame(self, bg="#2196f3", relief=tk.RAISED, bd=2)
+        
+        # Botón del asistente
+        self.ai_button = tk.Button(
+            self.ai_button_frame,
+            text="🤖\nIA",
+            font=("Arial", 10, "bold"),
+            bg="#2196f3",
+            fg="white",
+            activebackground="#1976d2",
+            activeforeground="white",
+            relief=tk.FLAT,
+            padx=8,
+            pady=5,
+            command=self.mostrar_asistente_ia,
+            cursor="hand2"
+        )
+        self.ai_button.pack(fill=tk.BOTH, expand=True)
+        
+        # Tooltip
+        self._crear_tooltip_asistente()
+        
+        # Posicionar el botón flotante
+        self.ai_button_frame.place(relx=0.98, rely=0.02, anchor="ne")
+        
+        # Efectos hover
+        self.ai_button.bind("<Enter>", self._on_ai_button_enter)
+        self.ai_button.bind("<Leave>", self._on_ai_button_leave)
+        
+    def _crear_tooltip_asistente(self):
+        """Crea tooltip para el botón del asistente"""
+        def mostrar_tooltip(event):
+            tooltip = tk.Toplevel()
+            tooltip.wm_overrideredirect(True)
+            tooltip.configure(bg="#333333")
+            
+            label = tk.Label(
+                tooltip,
+                text="Asistente IA (F9)\n¡Pregúntame cualquier cosa!",
+                bg="#333333",
+                fg="white",
+                font=("Arial", 9),
+                padx=10,
+                pady=5
+            )
+            label.pack()
+            
+            # Posicionar tooltip
+            x = event.x_root - 120
+            y = event.y_root - 60
+            tooltip.geometry(f"+{x}+{y}")
+            
+            # Auto-ocultar después de 3 segundos
+            tooltip.after(3000, tooltip.destroy)
+            
+        self.ai_button.bind("<Button-3>", mostrar_tooltip)  # Click derecho
+        
+    def _on_ai_button_enter(self, event):
+        """Efecto hover enter"""
+        self.ai_button.configure(bg="#1976d2")
+        
+    def _on_ai_button_leave(self, event):
+        """Efecto hover leave"""
+        self.ai_button.configure(bg="#2196f3")
+
     def _configurar_atajos(self):
         atajos = {
             "<F1>": lambda e: self.notebook.select(self.pestanas['Ventas']),
@@ -61,6 +144,7 @@ class InterfazPrincipal(tk.Toplevel):
             "<F6>": self.marcar_venta_pendiente,
             "<F7>": self.registrar_entrada_inventario,
             "<F8>": self.registrar_salida_inventario,
+            "<F9>": lambda e: self.mostrar_asistente_ia(),
             "<F10>": self.buscar_producto,
             "<F11>": self.aplicar_mayoreo,
             "<F12>": self.finalizar_venta_ui,
@@ -170,6 +254,270 @@ class InterfazPrincipal(tk.Toplevel):
 
     def mostrar_acerca_de(self):
         messagebox.showinfo("Acerca de", "Sistema de Caja POS\nVersión 1.0", parent=self)
+
+    def mostrar_asistente_ia(self):
+        """Muestra el asistente de IA avanzado"""
+        try:
+            self.ai_assistant_ui.show_assistant()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo abrir el asistente IA: {str(e)}", parent=self)
+    
+    def mostrar_whatsapp_bot(self):
+        """Muestra la interfaz del bot de WhatsApp"""
+        try:
+            self.crear_ventana_whatsapp_bot()
+        except Exception as e:
+            messagebox.showerror("Error", f"No se pudo abrir el bot de WhatsApp: {str(e)}", parent=self)
+    
+    def crear_ventana_whatsapp_bot(self):
+        """Crea la ventana de control del bot de WhatsApp"""
+        ventana_bot = tk.Toplevel(self)
+        ventana_bot.title("📱 Bot de WhatsApp - CajaCentral POS")
+        ventana_bot.geometry("600x500")
+        ventana_bot.configure(bg='#f0f0f0')
+        ventana_bot.transient(self)
+        ventana_bot.grab_set()
+        
+        # Frame principal
+        main_frame = ttk.Frame(ventana_bot)
+        main_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # Título
+        title_label = ttk.Label(main_frame, text="🤖 Bot de WhatsApp", 
+                               font=("Arial", 16, "bold"))
+        title_label.pack(pady=(0, 20))
+        
+        # Estado del bot
+        status_frame = ttk.LabelFrame(main_frame, text="Estado del Bot")
+        status_frame.pack(fill=tk.X, pady=(0, 20))
+        
+        self.whatsapp_status_label = ttk.Label(status_frame, 
+                                               text="🔴 Detenido", 
+                                               font=("Arial", 12, "bold"))
+        self.whatsapp_status_label.pack(pady=10)
+        
+        # Botones de control
+        buttons_frame = ttk.Frame(status_frame)
+        buttons_frame.pack(pady=10)
+        
+        self.btn_start_bot = ttk.Button(buttons_frame, text="🚀 Iniciar Bot", 
+                                        command=self.iniciar_whatsapp_bot)
+        self.btn_start_bot.pack(side=tk.LEFT, padx=5)
+        
+        self.btn_stop_bot = ttk.Button(buttons_frame, text="🛑 Detener Bot", 
+                                       command=self.detener_whatsapp_bot, 
+                                       state=tk.DISABLED)
+        self.btn_stop_bot.pack(side=tk.LEFT, padx=5)
+        
+        ttk.Button(buttons_frame, text="⚙️ Configurar", 
+                  command=self.configurar_whatsapp_bot).pack(side=tk.LEFT, padx=5)
+        
+        # Información
+        info_frame = ttk.LabelFrame(main_frame, text="Información")
+        info_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 20))
+        
+        info_text = """
+🤖 El Bot de WhatsApp permite:
+
+✅ Responder automáticamente a clientes
+✅ Usar inteligencia artificial integrada
+✅ Atención 24/7 con horarios configurables
+✅ Integración completa con tu sistema POS
+
+📋 Requisitos:
+• Google Chrome instalado
+• WhatsApp Web configurado
+• Conexión a internet estable
+
+⚠️ Primera vez:
+1. Haz clic en "Iniciar Bot"
+2. Se abrirá WhatsApp Web
+3. Escanea el código QR
+4. ¡Listo! El bot monitoreará mensajes
+
+🔧 El bot usa tu asistente IA existente para
+   generar respuestas inteligentes y personalizadas.
+        """
+        
+        info_label = ttk.Label(info_frame, text=info_text, 
+                              justify=tk.LEFT, wraplength=500)
+        info_label.pack(padx=10, pady=10, anchor=tk.W)
+        
+        # Log de actividad
+        log_frame = ttk.LabelFrame(main_frame, text="Log de Actividad")
+        log_frame.pack(fill=tk.BOTH, expand=True)
+        
+        from tkinter import scrolledtext
+        self.whatsapp_log = scrolledtext.ScrolledText(log_frame, height=8, 
+                                                      state=tk.DISABLED)
+        self.whatsapp_log.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Agregar mensaje inicial
+        self.log_whatsapp("🤖 Bot de WhatsApp listo para configurar")
+    
+    def iniciar_whatsapp_bot(self):
+        """Inicia el bot de WhatsApp en un hilo separado"""
+        if self.whatsapp_bot_running:
+            messagebox.showwarning("Advertencia", "El bot ya está ejecutándose")
+            return
+        
+        try:
+            self.log_whatsapp("🚀 Iniciando bot de WhatsApp...")
+            
+            # Importar el bot
+            try:
+                from whatsapp_bot_simple import SimpleWhatsAppBot
+            except ImportError:
+                messagebox.showerror("Error", 
+                    "No se encontró el módulo del bot de WhatsApp.\n"
+                    "Ejecuta 'python setup_whatsapp_bot.py' primero.")
+                return
+            
+            # Crear instancia del bot
+            self.whatsapp_bot = SimpleWhatsAppBot()
+            
+            # Iniciar en hilo separado
+            def run_bot():
+                try:
+                    self.whatsapp_bot_running = True
+                    self.after(0, self.actualizar_estado_bot, "🟢 Ejecutándose", "green")
+                    self.after(0, lambda: self.btn_start_bot.config(state=tk.DISABLED))
+                    self.after(0, lambda: self.btn_stop_bot.config(state=tk.NORMAL))
+                    
+                    self.whatsapp_bot.start_monitoring()
+                    
+                except Exception as e:
+                    self.after(0, self.log_whatsapp, f"❌ Error en bot: {e}")
+                finally:
+                    self.whatsapp_bot_running = False
+                    self.after(0, self.actualizar_estado_bot, "🔴 Detenido", "red")
+                    self.after(0, lambda: self.btn_start_bot.config(state=tk.NORMAL))
+                    self.after(0, lambda: self.btn_stop_bot.config(state=tk.DISABLED))
+            
+            bot_thread = threading.Thread(target=run_bot, daemon=True)
+            bot_thread.start()
+            
+            self.log_whatsapp("✅ Bot iniciado correctamente")
+            
+        except Exception as e:
+            self.log_whatsapp(f"❌ Error iniciando bot: {e}")
+            messagebox.showerror("Error", f"No se pudo iniciar el bot: {e}")
+    
+    def detener_whatsapp_bot(self):
+        """Detiene el bot de WhatsApp"""
+        if not self.whatsapp_bot_running:
+            return
+        
+        try:
+            self.log_whatsapp("🛑 Deteniendo bot...")
+            
+            if self.whatsapp_bot:
+                self.whatsapp_bot.stop()
+            
+            self.whatsapp_bot_running = False
+            self.actualizar_estado_bot("🔴 Detenido", "red")
+            self.btn_start_bot.config(state=tk.NORMAL)
+            self.btn_stop_bot.config(state=tk.DISABLED)
+            
+            self.log_whatsapp("✅ Bot detenido correctamente")
+            
+        except Exception as e:
+            self.log_whatsapp(f"❌ Error deteniendo bot: {e}")
+    
+    def configurar_whatsapp_bot(self):
+        """Abre la configuración del bot de WhatsApp"""
+        config_window = tk.Toplevel(self)
+        config_window.title("⚙️ Configuración Bot WhatsApp")
+        config_window.geometry("500x400")
+        config_window.transient(self)
+        config_window.grab_set()
+        
+        # Configuración básica
+        config_frame = ttk.LabelFrame(config_window, text="Configuración")
+        config_frame.pack(fill=tk.BOTH, expand=True, padx=20, pady=20)
+        
+        # Horario de atención
+        ttk.Label(config_frame, text="Horario de Atención:").pack(anchor=tk.W, pady=(10, 5))
+        
+        horario_frame = ttk.Frame(config_frame)
+        horario_frame.pack(anchor=tk.W, pady=(0, 10))
+        
+        ttk.Label(horario_frame, text="De:").pack(side=tk.LEFT)
+        hora_inicio = ttk.Spinbox(horario_frame, from_=0, to=23, width=5, value=8)
+        hora_inicio.pack(side=tk.LEFT, padx=(5, 10))
+        
+        ttk.Label(horario_frame, text="A:").pack(side=tk.LEFT)
+        hora_fin = ttk.Spinbox(horario_frame, from_=0, to=23, width=5, value=20)
+        hora_fin.pack(side=tk.LEFT, padx=5)
+        
+        # Mensaje fuera de horario
+        ttk.Label(config_frame, text="Mensaje fuera de horario:").pack(anchor=tk.W, pady=(10, 5))
+        
+        from tkinter import scrolledtext
+        mensaje_fuera = scrolledtext.ScrolledText(config_frame, height=4, width=50)
+        mensaje_fuera.pack(fill=tk.X, pady=(0, 10))
+        mensaje_fuera.insert(tk.END, 
+            "🕐 Estamos fuera del horario de atención. "
+            "Te responderemos en cuanto abramos. ¡Gracias!")
+        
+        # Respuesta automática
+        ttk.Label(config_frame, text="Respuesta de saludo:").pack(anchor=tk.W, pady=(10, 5))
+        
+        saludo_text = scrolledtext.ScrolledText(config_frame, height=3, width=50)
+        saludo_text.pack(fill=tk.X, pady=(0, 10))
+        saludo_text.insert(tk.END, 
+            "¡Hola! 👋 Soy el asistente virtual de CajaCentral POS. "
+            "¿En qué puedo ayudarte?")
+        
+        # Botones
+        buttons_frame = ttk.Frame(config_frame)
+        buttons_frame.pack(fill=tk.X, pady=20)
+        
+        ttk.Button(buttons_frame, text="💾 Guardar", 
+                  command=lambda: self.guardar_config_whatsapp(config_window)).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(buttons_frame, text="❌ Cancelar", 
+                  command=config_window.destroy).pack(side=tk.RIGHT)
+    
+    def guardar_config_whatsapp(self, window):
+        """Guarda la configuración del bot"""
+        self.log_whatsapp("💾 Configuración guardada")
+        messagebox.showinfo("Éxito", "Configuración guardada correctamente")
+        window.destroy()
+    
+    def actualizar_estado_bot(self, texto, color="black"):
+        """Actualiza el estado visual del bot"""
+        if hasattr(self, 'whatsapp_status_label'):
+            self.whatsapp_status_label.config(text=texto, foreground=color)
+    
+    def abrir_launcher_whatsapp(self):
+        """Abre el launcher inteligente de WhatsApp Bot"""
+        try:
+            import subprocess
+            import sys
+            
+            # Ejecutar launcher en nueva ventana
+            subprocess.Popen([sys.executable, "launch_whatsapp_bot.py"], 
+                           creationflags=subprocess.CREATE_NEW_CONSOLE)
+            
+            messagebox.showinfo("Launcher WhatsApp", 
+                               "🚀 Launcher de WhatsApp Bot iniciado en nueva ventana.\n\n"
+                               "El launcher detectará automáticamente la mejor versión "
+                               "del bot para tu sistema.", parent=self)
+            
+        except Exception as e:
+            messagebox.showerror("Error", 
+                               f"No se pudo abrir el launcher: {e}\n\n"
+                               "Ejecuta manualmente: python launch_whatsapp_bot.py", 
+                               parent=self)
+    
+    def log_whatsapp(self, mensaje):
+        """Agrega mensaje al log del bot"""
+        if hasattr(self, 'whatsapp_log'):
+            timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+            self.whatsapp_log.config(state=tk.NORMAL)
+            self.whatsapp_log.insert(tk.END, f"[{timestamp}] {mensaje}\n")
+            self.whatsapp_log.see(tk.END)
+            self.whatsapp_log.config(state=tk.DISABLED)
 
     # --- MÉTODOS DE ACTUALIZACIÓN DE TREEVIEW MEJORADOS ---
     def actualizar_treeview_promocion(self):

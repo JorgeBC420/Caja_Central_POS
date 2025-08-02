@@ -1,0 +1,10 @@
+{
+  "user": {
+    "username": "admin",
+    "full_name": "Administrador",
+    "role": "admin",
+    "permissions": "all",
+    "login_time": "2025-08-01T22:56:42.902063"
+  },
+  "timestamp": "2025-08-01T22:56:42.903005"
+}
