@@ -388,6 +388,131 @@
         .feature-card, .system-card, .benefit-card {
             animation: fadeInUp 0.6s ease-out;
         }
+
+        /* Chatbox Styles */
+        .chatbox-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+
+        .chatbox-toggle {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            font-size: 1.5rem;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbox-toggle:hover {
+            transform: scale(1.1);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.4);
+        }
+
+        .chatbox {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 350px;
+            height: 500px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .chatbox-header {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            padding: 15px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .chatbox-messages {
+            flex: 1;
+            padding: 15px;
+            overflow-y: auto;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 10px 15px;
+            border-radius: 15px;
+            max-width: 80%;
+        }
+
+        .message.bot {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            margin-right: auto;
+        }
+
+        .message.user {
+            background: #e3f2fd;
+            color: #1976d2;
+            margin-left: auto;
+            text-align: right;
+        }
+
+        .chatbox-input {
+            display: flex;
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #eee;
+        }
+
+        .chatbox-input input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            outline: none;
+        }
+
+        .chatbox-input button {
+            margin-left: 10px;
+            padding: 10px 20px;
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            cursor: pointer;
+        }
+
+        .quick-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .quick-btn {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .quick-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
     </style>
 </head>
 <body>
@@ -402,7 +527,7 @@
                         <p style="color: #7f8c8d; margin: 0; font-size: 0.9rem;">Sistema Integral Costa Rica</p>
                     </div>
                 </div>
-                <div class="version">v2.0 - Edición Completa</div>
+                <div class="version">v2.5 - IA + UI Mejorada</div>
             </div>
         </div>
     </header>
@@ -685,6 +810,36 @@
                     <h3>Soporte Completo</h3>
                     <p>Implementación, capacitación y soporte técnico incluido</p>
                 </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">🤖</div>
+                    <h3>Asistente IA 24/7</h3>
+                    <p>Chatbot inteligente que responde dudas y guía usuarios en tiempo real</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">📱</div>
+                    <h3>App Móvil Integrada</h3>
+                    <p>Controla tu negocio desde cualquier lugar con aplicación móvil completa</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">💾</div>
+                    <h3>Respaldos Automáticos</h3>
+                    <p>Tus datos siempre seguros con backups automáticos y recuperación rápida</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">🌐</div>
+                    <h3>Sin Internet? Sin Problema</h3>
+                    <p>Funciona offline y sincroniza cuando hay conexión disponible</p>
+                </div>
+
+                <div class="benefit-card">
+                    <div class="benefit-icon">⚡</div>
+                    <h3>Arranque Ultrarrápido</h3>
+                    <p>Sistema optimizado que inicia en segundos, no minutos</p>
+                </div>
             </div>
         </div>
     </section>
@@ -779,6 +934,36 @@
         </div>
     </footer>
 
+    <!-- Chatbox -->
+    <div class="chatbox-container">
+        <div class="chatbox" id="chatbox">
+            <div class="chatbox-header">
+                🤖 Asistente POS IA
+                <div class="quick-buttons">
+                    <div class="quick-btn" onclick="sendQuickMessage('¿Cómo hacer una venta?')">💰 Ventas</div>
+                    <div class="quick-btn" onclick="sendQuickMessage('¿Cómo buscar productos?')">🔍 Productos</div>
+                    <div class="quick-btn" onclick="sendQuickMessage('¿Qué atajos hay?')">⌨️ Atajos</div>
+                </div>
+            </div>
+            <div class="chatbox-messages" id="chatMessages">
+                <div class="message bot">
+                    ¡Hola! 👋 Soy el asistente de Caja Central POS. ¿En qué puedo ayudarte?
+                    <br><br>
+                    Puedo ayudarte con:
+                    <br>• Explicar funciones del sistema
+                    <br>• Resolver errores comunes  
+                    <br>• Mostrar atajos de teclado
+                    <br>• Guiar paso a paso
+                </div>
+            </div>
+            <div class="chatbox-input">
+                <input type="text" id="chatInput" placeholder="Pregúntame sobre el sistema POS..." onkeypress="handleEnter(event)">
+                <button onclick="sendMessage()">📤</button>
+            </div>
+        </div>
+        <button class="chatbox-toggle" id="chatToggle" onclick="toggleChat()">🤖</button>
+    </div>
+
     <script>
         // Smooth scroll for navigation links
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
@@ -812,6 +997,130 @@
             card.style.transition = 'all 0.6s ease';
             observer.observe(card);
         });
+
+        // Chatbox functionality
+        let chatVisible = false;
+        
+        function toggleChat() {
+            const chatbox = document.getElementById('chatbox');
+            const toggle = document.getElementById('chatToggle');
+            
+            if (chatVisible) {
+                chatbox.style.display = 'none';
+                toggle.innerHTML = '🤖';
+                chatVisible = false;
+            } else {
+                chatbox.style.display = 'flex';
+                toggle.innerHTML = '✖️';
+                chatVisible = true;
+            }
+        }
+        
+        function sendMessage() {
+            const input = document.getElementById('chatInput');
+            const message = input.value.trim();
+            if (message) {
+                addMessage(message, 'user');
+                input.value = '';
+                
+                // Simulate bot response
+                setTimeout(() => {
+                    const response = getBotResponse(message);
+                    addMessage(response, 'bot');
+                }, 1000);
+            }
+        }
+        
+        function sendQuickMessage(message) {
+            addMessage(message, 'user');
+            setTimeout(() => {
+                const response = getBotResponse(message);
+                addMessage(response, 'bot');
+            }, 800);
+        }
+        
+        function addMessage(text, sender) {
+            const messagesContainer = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            messageDiv.innerHTML = text;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function getBotResponse(message) {
+            const msg = message.toLowerCase();
+            
+            if (msg.includes('venta') || msg.includes('cobrar') || msg.includes('vender')) {
+                return `💰 <strong>Para realizar una venta:</strong><br>
+                1️⃣ Busca el producto (F2)<br>
+                2️⃣ Especifica cantidad<br>
+                3️⃣ Selecciona método de pago<br>
+                4️⃣ Procesa la venta (F3)<br>
+                <br>🎯 <strong>Tip:</strong> Usa el escáner para códigos de barras`;
+            }
+            
+            if (msg.includes('producto') || msg.includes('buscar') || msg.includes('encontrar')) {
+                return `🔍 <strong>Para buscar productos:</strong><br>
+                • Presiona F2 para búsqueda rápida<br>
+                • Usa códigos de barras<br>
+                • Busca por nombre o código<br>
+                • Usa * para búsquedas parciales<br>
+                <br>📦 Ve a Inventario > Buscar para más opciones`;
+            }
+            
+            if (msg.includes('atajo') || msg.includes('tecla') || msg.includes('shortcut')) {
+                return `⌨️ <strong>Atajos principales:</strong><br>
+                • F1: Nueva venta<br>
+                • F2: Buscar producto<br>
+                • F3: Procesar pago<br>
+                • F5: Reportes<br>
+                • F9: Ayuda<br>
+                • Ctrl+N: Nuevo producto<br>
+                <br>💡 Presiona F9 en el sistema para ver todos`;
+            }
+            
+            if (msg.includes('error') || msg.includes('problema')) {
+                return `⚠️ <strong>Para errores comunes:</strong><br>
+                • Producto no encontrado: Verifica código<br>
+                • Error impresión: Revisa conexión<br>
+                • Stock insuficiente: Actualiza inventario<br>
+                <br>🛠️ Describe tu error específico para ayuda detallada`;
+            }
+            
+            if (msg.includes('restaurante') || msg.includes('mesa')) {
+                return `🍽️ <strong>Sistema de Restaurante:</strong><br>
+                • Grid visual de mesas<br>
+                • Control de cuentas activas<br>
+                • Menú por categorías<br>
+                • Nueva interfaz verde turquesa<br>
+                <br>🎨 Ahora con mejor contraste visual`;
+            }
+            
+            if (msg.includes('color') || msg.includes('interfaz') || msg.includes('visual')) {
+                return `🎨 <strong>Nueva Interfaz 2025:</strong><br>
+                • Azul Rey: Configuración y ventas<br>
+                • Verde Turquesa: Restaurante<br>
+                • Máximo contraste y legibilidad<br>
+                • Sin texto blanco en fondos claros<br>
+                <br>✨ Diseño profesional optimizado`;
+            }
+            
+            // Respuesta por defecto
+            return `🤖 Entiendo tu consulta. El sistema POS tiene estas áreas principales:<br>
+            • 💰 Ventas y cobros<br>
+            • 📦 Inventario y productos<br>
+            • 🍽️ Sistema de restaurante<br>
+            • 📊 Reportes y análisis<br>
+            • ⚙️ Configuración<br>
+            <br>¿Sobre cuál te gustaría saber más?`;
+        }
+        
+        function handleEnter(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
     </script>
 </body>
 </html>
