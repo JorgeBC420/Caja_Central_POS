@@ -1,0 +1,297 @@
+{% extends "base.html" %}
+
+{% block title %}Inventario - Caja Central POS{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-3">
+    <!-- Header del Inventario -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <h2 class="h4 mb-0">
+                    <i class="fas fa-boxes text-primary me-2"></i>
+                    Gestión de Inventario
+                </h2>
+                <div class="badge bg-info">
+                    Total: {{ products|length }} productos
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filtros de Búsqueda -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <form method="GET" action="{{ url_for('inventory') }}" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="search" class="form-label">Buscar Producto</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" 
+                                       class="form-control" 
+                                       id="search" 
+                                       name="search" 
+                                       placeholder="Código o nombre del producto..."
+                                       value="{{ search }}">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="category" class="form-label">Categoría</label>
+                            <select class="form-select" id="category" name="category">
+                                <option value="">Todas las categorías</option>
+                                {% for cat in categories %}
+                                <option value="{{ cat }}" {% if cat == current_category %}selected{% endif %}>
+                                    {{ cat }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-2 d-flex align-items-end">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter me-1"></i>
+                                Filtrar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Resumen de Stock -->
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Stock Alto</h6>
+                            <h4>{{ products|selectattr('stock', '>', 50)|list|length }}</h4>
+                        </div>
+                        <i class="fas fa-arrow-up fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Stock Medio</h6>
+                            <h4>{{ products|selectattr('stock', '<=', 50)|selectattr('stock', '>', 10)|list|length }}</h4>
+                        </div>
+                        <i class="fas fa-arrow-right fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-danger">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Stock Bajo</h6>
+                            <h4>{{ products|selectattr('stock', '<=', 10)|list|length }}</h4>
+                        </div>
+                        <i class="fas fa-arrow-down fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between">
+                        <div>
+                            <h6 class="card-title">Valor Total</h6>
+                            <h4>₡{{ "%.0f"|format(products|sum(attribute='precio')|float) }}</h4>
+                        </div>
+                        <i class="fas fa-dollar-sign fa-2x"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Productos -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-list me-2"></i>
+                        Productos en Inventario
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    {% if products %}
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Código</th>
+                                    <th>Producto</th>
+                                    <th>Categoría</th>
+                                    <th>Precio</th>
+                                    <th>Stock</th>
+                                    <th>Estado</th>
+                                    <th>Valor Total</th>
+                                    <th>Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for product in products %}
+                                <tr class="{% if product.stock <= 5 %}table-danger{% elif product.stock <= 10 %}table-warning{% endif %}">
+                                    <td>
+                                        <code>{{ product.codigo }}</code>
+                                    </td>
+                                    <td>
+                                        <strong>{{ product.nombre }}</strong>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">{{ product.categoria }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-bold">₡{{ "%.0f"|format(product.precio) }}</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {% if product.stock <= 5 %}bg-danger{% elif product.stock <= 10 %}bg-warning{% else %}bg-success{% endif %}">
+                                            {{ product.stock }} unidades
+                                        </span>
+                                    </td>
+                                    <td>
+                                        {% if product.stock <= 5 %}
+                                            <i class="fas fa-exclamation-triangle text-danger" title="Stock crítico"></i>
+                                            <small class="text-danger">Crítico</small>
+                                        {% elif product.stock <= 10 %}
+                                            <i class="fas fa-exclamation-circle text-warning" title="Stock bajo"></i>
+                                            <small class="text-warning">Bajo</small>
+                                        {% else %}
+                                            <i class="fas fa-check-circle text-success" title="Stock normal"></i>
+                                            <small class="text-success">Normal</small>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        <span class="fw-bold">₡{{ "%.0f"|format(product.precio * product.stock) }}</span>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group btn-group-sm">
+                                            <button class="btn btn-outline-primary btn-sm" 
+                                                    onclick="editStock({{ product.id }}, '{{ product.nombre }}', {{ product.stock }})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-outline-success btn-sm add-to-cart-btn"
+                                                    data-product-id="{{ product.id }}"
+                                                    data-product-name="{{ product.nombre }}"
+                                                    data-product-price="{{ product.precio }}">
+                                                <i class="fas fa-cart-plus"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-5">
+                        <i class="fas fa-box-open fa-3x text-muted mb-3"></i>
+                        <h5 class="text-muted">No se encontraron productos</h5>
+                        <p class="text-muted">Intenta cambiar los filtros de búsqueda</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Editar Stock -->
+<div class="modal fade" id="editStockModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="fas fa-edit me-2"></i>
+                    Actualizar Stock
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editStockForm">
+                    <input type="hidden" id="productId">
+                    <div class="mb-3">
+                        <label for="productName" class="form-label">Producto</label>
+                        <input type="text" class="form-control" id="productName" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="currentStock" class="form-label">Stock Actual</label>
+                        <input type="number" class="form-control" id="currentStock" readonly>
+                    </div>
+                    <div class="mb-3">
+                        <label for="newStock" class="form-label">Nuevo Stock</label>
+                        <input type="number" class="form-control" id="newStock" min="0" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="updateStock()">
+                    <i class="fas fa-save me-1"></i>
+                    Actualizar Stock
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function editStock(productId, productName, currentStock) {
+    document.getElementById('productId').value = productId;
+    document.getElementById('productName').value = productName;
+    document.getElementById('currentStock').value = currentStock;
+    document.getElementById('newStock').value = currentStock;
+    
+    const modal = new bootstrap.Modal(document.getElementById('editStockModal'));
+    modal.show();
+}
+
+function updateStock() {
+    const productId = document.getElementById('productId').value;
+    const newStock = document.getElementById('newStock').value;
+    
+    if (!newStock || newStock < 0) {
+        alert('Por favor ingresa un stock válido');
+        return;
+    }
+    
+    fetch('/api/update-stock', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            product_id: productId,
+            new_stock: parseInt(newStock)
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload();
+        } else {
+            alert('Error al actualizar el stock: ' + data.error);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error de conexión al actualizar el stock');
+    });
+}
+</script>
+{% endblock %}

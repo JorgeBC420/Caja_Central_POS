@@ -34,7 +34,7 @@ class Registro(Base):
     monto = Column(Float, default=0.0)
     tipo = Column(String(50), nullable=False, index=True)
     fecha = Column(DateTime, default=datetime.now, index=True)
-    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=True, index=True)
+    usuario_id = Column(Integer, nullable=True, index=True)  # Sin FK por simplicidad
     referencia_id = Column(Integer, nullable=True, index=True)  # ID de referencia a otra tabla
     referencia_tabla = Column(String(50), nullable=True)  # Nombre de la tabla referenciada
     activo = Column(Boolean, default=True)
@@ -58,10 +58,10 @@ class RegistroVenta(Base):
     __tablename__ = "registro_ventas"
     
     id = Column(Integer, primary_key=True, index=True)
-    venta_id = Column(Integer, ForeignKey('ventas.id'), nullable=False, index=True)
+    venta_id = Column(Integer, nullable=False, index=True)  # Sin FK por simplicidad
     numero_venta = Column(String(50), nullable=False, index=True)
-    cliente_id = Column(Integer, ForeignKey('clientes.id'), nullable=True, index=True)
-    usuario_id = Column(Integer, ForeignKey('usuarios.id'), nullable=False, index=True)
+    cliente_id = Column(Integer, nullable=True, index=True)  # Sin FK por simplicidad
+    usuario_id = Column(Integer, nullable=False, index=True)  # Sin FK por simplicidad
     fecha_venta = Column(DateTime, nullable=False, index=True)
     subtotal = Column(Float, nullable=False)
     impuesto = Column(Float, nullable=False)

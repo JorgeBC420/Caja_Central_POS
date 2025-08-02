@@ -1,0 +1,353 @@
+{% extends "base.html" %}
+
+{% block title %}Historial de Ventas - POS Mobile{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+    <!-- Header -->
+    <div class="card bg-warning text-dark">
+        <div class="card-body py-3">
+            <h5 class="mb-0"><i class="bi bi-receipt"></i> Historial de Ventas</h5>
+            <small>Últimas transacciones realizadas</small>
+        </div>
+    </div>
+
+    <!-- Filtros rápidos -->
+    <div class="card">
+        <div class="card-body py-2">
+            <div class="row align-items-center">
+                <div class="col">
+                    <small class="text-muted">Filtrar por:</small>
+                </div>
+                <div class="col-auto">
+                    <select class="form-select form-select-sm" onchange="filterSales(this.value)">
+                        <option value="all">Todas</option>
+                        <option value="today">Hoy</option>
+                        <option value="week">Esta semana</option>
+                        <option value="month">Este mes</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de ventas -->
+    {% if sales %}
+    <div id="sales-container">
+        {% for sale in sales %}
+        <div class="card sale-item" data-date="{{ sale.fecha }}">
+            <div class="card-body py-3">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <div class="d-flex align-items-center mb-1">
+                            <i class="bi bi-receipt text-success me-2"></i>
+                            <strong>Venta #{{ sale.id }}</strong>
+                            {% if sale.estado == 'completada' %}
+                                <span class="badge bg-success ms-2">Completada</span>
+                            {% else %}
+                                <span class="badge bg-warning ms-2">{{ sale.estado|title }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="small text-muted mb-2">
+                            <i class="bi bi-calendar"></i> {{ sale.fecha.strftime('%d/%m/%Y %H:%M') if sale.fecha else 'N/A' }}
+                            {% if sale.vendedor %}
+                            | <i class="bi bi-person"></i> {{ sale.vendedor }}
+                            {% endif %}
+                        </div>
+                        
+                        <!-- Items de la venta -->
+                        {% if sale.items_json %}
+                        {% set items = sale.items_json|from_json %}
+                        <div class="small mb-2">
+                            {% for item in items[:3] %}
+                            <div class="text-muted">
+                                • {{ item.nombre }} x{{ item.cantidad }} 
+                                <span class="text-success">₡{{ "{:,.0f}".format(item.subtotal) }}</span>
+                            </div>
+                            {% endfor %}
+                            {% if items|length > 3 %}
+                            <div class="text-muted">... y {{ items|length - 3 }} producto{{ 's' if items|length - 3 != 1 else '' }} más</div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="col-auto text-end">
+                        <div class="h5 mb-1 text-success">
+                            ₡{{ "{:,.0f}".format(sale.total) }}
+                        </div>
+                        <button class="btn btn-sm btn-outline-primary" 
+                                onclick="showSaleDetails({{ sale.id }})">
+                            <i class="bi bi-eye"></i> Ver
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Resumen -->
+    <div class="card bg-light">
+        <div class="card-body text-center py-3">
+            {% set total_amount = sales|sum(attribute='total') %}
+            <small class="text-muted">
+                Total mostrado: {{ sales|length }} venta{{ 's' if sales|length != 1 else '' }} 
+                por ₡{{ "{:,.0f}".format(total_amount) }}
+            </small>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- No hay ventas -->
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-receipt text-muted" style="font-size: 3rem;"></i>
+            <h5 class="mt-3">No hay ventas registradas</h5>
+            <p class="text-muted">Las ventas aparecerán aquí una vez que se realicen</p>
+            <a href="{{ url_for('pos') }}" class="btn btn-success">
+                <i class="bi bi-cart-plus"></i> Realizar Primera Venta
+            </a>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Botón flotante para nueva venta -->
+    <div class="floating-cart">
+        <a href="{{ url_for('pos') }}" class="btn btn-success btn-lg rounded-circle shadow">
+            <i class="bi bi-plus-lg"></i>
+        </a>
+    </div>
+</div>
+
+<!-- Modal de detalles de venta -->
+<div class="modal fade" id="saleDetailsModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="bi bi-receipt"></i> Detalles de Venta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="saleDetailsContent">
+                <div class="text-center py-3">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                <button type="button" class="btn btn-primary" onclick="printReceipt()">
+                    <i class="bi bi-printer"></i> Imprimir
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentSaleDetails = null;
+
+function filterSales(period) {
+    const salesItems = document.querySelectorAll('.sale-item');
+    const now = new Date();
+    
+    salesItems.forEach(item => {
+        const saleDate = new Date(item.dataset.date);
+        let show = false;
+        
+        switch(period) {
+            case 'all':
+                show = true;
+                break;
+            case 'today':
+                show = saleDate.toDateString() === now.toDateString();
+                break;
+            case 'week':
+                const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                show = saleDate >= weekAgo;
+                break;
+            case 'month':
+                const monthAgo = new Date(now.getFullYear(), now.getMonth() - 1, now.getDate());
+                show = saleDate >= monthAgo;
+                break;
+        }
+        
+        item.style.display = show ? 'block' : 'none';
+    });
+    
+    // Actualizar contador
+    updateSalesCounter();
+}
+
+function updateSalesCounter() {
+    const visibleSales = document.querySelectorAll('.sale-item:not([style*="display: none"])');
+    const totalAmount = Array.from(visibleSales).reduce((sum, item) => {
+        const amountText = item.querySelector('.text-success').textContent;
+        const amount = parseFloat(amountText.replace(/[₡,]/g, ''));
+        return sum + amount;
+    }, 0);
+    
+    // Actualizar el resumen si existe
+    const summary = document.querySelector('.card.bg-light .text-muted');
+    if (summary) {
+        summary.innerHTML = `
+            Total mostrado: ${visibleSales.length} venta${visibleSales.length !== 1 ? 's' : ''} 
+            por ₡${totalAmount.toLocaleString()}
+        `;
+    }
+}
+
+function showSaleDetails(saleId) {
+    // Buscar los detalles de la venta en los datos cargados
+    const saleCards = document.querySelectorAll('.sale-item');
+    let saleData = null;
+    
+    saleCards.forEach(card => {
+        const cardSaleId = card.querySelector('strong').textContent.match(/\d+/)[0];
+        if (parseInt(cardSaleId) === saleId) {
+            saleData = extractSaleData(card);
+        }
+    });
+    
+    if (saleData) {
+        displaySaleDetails(saleData);
+        const modal = new bootstrap.Modal(document.getElementById('saleDetailsModal'));
+        modal.show();
+    }
+}
+
+function extractSaleData(saleCard) {
+    const saleIdText = saleCard.querySelector('strong').textContent;
+    const dateText = saleCard.querySelector('.bi-calendar').parentNode.textContent;
+    const totalText = saleCard.querySelector('.text-success').textContent;
+    const itemsElements = saleCard.querySelectorAll('.text-muted');
+    
+    return {
+        id: saleIdText.match(/\d+/)[0],
+        date: dateText.split('|')[0].replace('📅', '').trim(),
+        vendor: dateText.includes('|') ? dateText.split('|')[1].replace('👤', '').trim() : 'N/A',
+        total: totalText,
+        items: Array.from(itemsElements).slice(1).map(el => el.textContent.trim()).filter(text => text.startsWith('•'))
+    };
+}
+
+function displaySaleDetails(saleData) {
+    currentSaleDetails = saleData;
+    
+    const content = document.getElementById('saleDetailsContent');
+    content.innerHTML = `
+        <div class="row mb-3">
+            <div class="col-6">
+                <strong>Venta #${saleData.id}</strong>
+            </div>
+            <div class="col-6 text-end">
+                <span class="badge bg-success">Completada</span>
+            </div>
+        </div>
+        
+        <div class="row mb-3">
+            <div class="col-6">
+                <small class="text-muted">Fecha:</small><br>
+                ${saleData.date}
+            </div>
+            <div class="col-6">
+                <small class="text-muted">Vendedor:</small><br>
+                ${saleData.vendor}
+            </div>
+        </div>
+        
+        <div class="mb-3">
+            <h6><i class="bi bi-list"></i> Productos</h6>
+            <div class="border rounded p-2">
+                ${saleData.items.length > 0 ? 
+                    saleData.items.map(item => `<div>${item}</div>`).join('') :
+                    '<div class="text-muted">No hay detalles de productos disponibles</div>'
+                }
+            </div>
+        </div>
+        
+        <div class="row">
+            <div class="col">
+                <h5>Total: ${saleData.total}</h5>
+            </div>
+        </div>
+    `;
+}
+
+function printReceipt() {
+    if (!currentSaleDetails) return;
+    
+    const printContent = `
+        <div style="font-family: monospace; max-width: 300px; margin: 0 auto;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h3>CAJA CENTRAL POS</h3>
+                <p>Sistema Móvil</p>
+                <hr>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <strong>Venta #${currentSaleDetails.id}</strong><br>
+                Fecha: ${currentSaleDetails.date}<br>
+                Vendedor: ${currentSaleDetails.vendor}
+            </div>
+            
+            <hr>
+            
+            <div style="margin-bottom: 15px;">
+                <strong>PRODUCTOS:</strong><br>
+                ${currentSaleDetails.items.join('<br>')}
+            </div>
+            
+            <hr>
+            
+            <div style="text-align: right; font-size: 1.2em;">
+                <strong>TOTAL: ${currentSaleDetails.total}</strong>
+            </div>
+            
+            <div style="text-align: center; margin-top: 20px;">
+                <p>¡Gracias por su compra!</p>
+                <small>Recibo generado desde POS Mobile</small>
+            </div>
+        </div>
+    `;
+    
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+        <html>
+            <head>
+                <title>Recibo - Venta #${currentSaleDetails.id}</title>
+                <style>
+                    body { margin: 20px; }
+                    @media print { body { margin: 0; } }
+                </style>
+            </head>
+            <body>
+                ${printContent}
+                <script>
+                    window.onload = function() {
+                        window.print();
+                        window.close();
+                    }
+                </script>
+            </body>
+        </html>
+    `);
+    printWindow.document.close();
+}
+
+// Auto-actualizar cada minuto
+setInterval(function() {
+    // Solo recargar si estamos en la pestaña activa
+    if (!document.hidden) {
+        location.reload();
+    }
+}, 60000);
+</script>
+
+<!-- Filtro personalizado para JSON -->
+{% set _dummy = self.add_filter('from_json', lambda x: x|default([])|list if x else []) %}
+{% endblock %}

@@ -1105,3 +1105,21 @@ class DatabaseManager:
         except Exception as e:
             self.logger.error(f"Error al inicializar tablas: {e}")
             raise
+
+# Instancia global del gestor de base de datos
+db_manager = DatabaseManager()
+
+# Funciones de nivel superior para compatibilidad
+def ejecutar_consulta_segura(query, params=None):
+    """Función de compatibilidad para ejecutar consultas seguras"""
+    return db_manager.ejecutar_consulta_segura(query, params)
+
+@contextmanager
+def get_db_cursor():
+    """Context manager para obtener cursor de base de datos"""
+    return db_manager.get_db_cursor()
+
+@contextmanager
+def get_db_connection():
+    """Context manager para obtener conexión de base de datos"""
+    return db_manager.get_db_connection()

@@ -1,0 +1,352 @@
+{% extends "base.html" %}
+
+{% block title %}Punto de Venta - POS Mobile{% endblock %}
+
+{% block content %}
+<div class="container mt-3">
+    <!-- Header del POS -->
+    <div class="card bg-success text-white">
+        <div class="card-body py-3">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h5 class="mb-0"><i class="bi bi-cart-plus"></i> Punto de Venta</h5>
+                    <small>Selecciona productos para vender</small>
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-light btn-sm" onclick="clearCart()">
+                        <i class="bi bi-arrow-clockwise"></i> Limpiar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Buscador de productos -->
+    <div class="card">
+        <div class="card-body py-2">
+            <div class="input-group">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" 
+                       class="form-control" 
+                       id="product-search" 
+                       placeholder="Buscar producto..."
+                       autocomplete="off">
+            </div>
+        </div>
+    </div>
+
+    <!-- Carrito de compras -->
+    <div class="card" id="cart-section" style="display: none;">
+        <div class="card-header bg-primary text-white">
+            <div class="row align-items-center">
+                <div class="col">
+                    <h6 class="mb-0"><i class="bi bi-cart"></i> Carrito</h6>
+                </div>
+                <div class="col-auto">
+                    <span id="cart-count" class="badge bg-light text-dark">0</span>
+                </div>
+            </div>
+        </div>
+        <div class="card-body p-0">
+            <div id="cart-items"></div>
+            <div class="p-3 border-top">
+                <div class="row align-items-center">
+                    <div class="col">
+                        <strong>Total: ₡<span id="cart-total">0</span></strong>
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-success" onclick="completeSale()">
+                            <i class="bi bi-check-circle"></i> Completar Venta
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de productos -->
+    <div class="card">
+        <div class="card-header">
+            <h6 class="mb-0"><i class="bi bi-box-seam"></i> Productos Disponibles</h6>
+        </div>
+        <div class="card-body p-0">
+            <div id="products-grid" class="row g-2 p-3">
+                <!-- Los productos se cargan aquí -->
+                <div class="col-12 text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Cargando...</span>
+                    </div>
+                    <p class="mt-2 text-muted">Cargando productos...</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<div class="modal fade" id="saleModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="bi bi-check-circle"></i> Confirmar Venta</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="sale-summary"></div>
+                <div class="mt-3">
+                    <h5>Total: ₡<span id="modal-total">0</span></h5>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-success" onclick="processSale()">
+                    <i class="bi bi-credit-card"></i> Procesar Venta
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let cart = [];
+let products = [];
+let searchTimeout;
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadProducts();
+    setupSearch();
+});
+
+function setupSearch() {
+    const searchInput = document.getElementById('product-search');
+    searchInput.addEventListener('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(() => {
+            filterProducts(this.value);
+        }, 300);
+    });
+}
+
+function loadProducts() {
+    fetch('/api/products')
+        .then(response => response.json())
+        .then(data => {
+            products = data;
+            displayProducts(products);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            document.getElementById('products-grid').innerHTML = `
+                <div class="col-12 text-center py-4">
+                    <i class="bi bi-exclamation-triangle text-warning fs-3"></i>
+                    <p class="text-muted mt-2">Error cargando productos</p>
+                </div>
+            `;
+        });
+}
+
+function filterProducts(search) {
+    const filtered = products.filter(product => 
+        product.nombre.toLowerCase().includes(search.toLowerCase()) ||
+        product.codigo.toLowerCase().includes(search.toLowerCase())
+    );
+    displayProducts(filtered);
+}
+
+function displayProducts(productsToShow) {
+    const grid = document.getElementById('products-grid');
+    
+    if (productsToShow.length === 0) {
+        grid.innerHTML = `
+            <div class="col-12 text-center py-4">
+                <i class="bi bi-search text-muted fs-3"></i>
+                <p class="text-muted mt-2">No se encontraron productos</p>
+            </div>
+        `;
+        return;
+    }
+    
+    grid.innerHTML = productsToShow.map(product => `
+        <div class="col-6 col-md-4 col-lg-3">
+            <div class="card product-card h-100" onclick="addToCart(${product.id})">
+                <div class="card-body p-2 text-center">
+                    <i class="bi bi-box text-primary fs-3"></i>
+                    <h6 class="card-title mt-2 mb-1" style="font-size: 0.9em;">${product.nombre}</h6>
+                    <div class="price-tag mb-2">₡${product.precio.toLocaleString()}</div>
+                    <div class="stock-badge">Stock: ${product.stock}</div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+function addToCart(productId) {
+    const product = products.find(p => p.id === productId);
+    if (!product || product.stock <= 0) {
+        alert('Producto no disponible o sin stock');
+        return;
+    }
+    
+    const existingItem = cart.find(item => item.producto_id === productId);
+    
+    if (existingItem) {
+        if (existingItem.cantidad < product.stock) {
+            existingItem.cantidad++;
+            existingItem.subtotal = existingItem.cantidad * existingItem.precio;
+        } else {
+            alert('No hay suficiente stock disponible');
+            return;
+        }
+    } else {
+        cart.push({
+            producto_id: productId,
+            nombre: product.nombre,
+            precio: product.precio,
+            cantidad: 1,
+            subtotal: product.precio
+        });
+    }
+    
+    updateCartDisplay();
+    
+    // Feedback visual
+    const productCard = event.target.closest('.product-card');
+    productCard.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+        productCard.style.transform = 'translateY(-2px)';
+    }, 100);
+}
+
+function updateCartDisplay() {
+    const cartSection = document.getElementById('cart-section');
+    const cartItems = document.getElementById('cart-items');
+    const cartCount = document.getElementById('cart-count');
+    const cartTotal = document.getElementById('cart-total');
+    
+    if (cart.length === 0) {
+        cartSection.style.display = 'none';
+        return;
+    }
+    
+    cartSection.style.display = 'block';
+    
+    const totalItems = cart.reduce((sum, item) => sum + item.cantidad, 0);
+    const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+    
+    cartCount.textContent = totalItems;
+    cartTotal.textContent = total.toLocaleString();
+    
+    cartItems.innerHTML = cart.map(item => `
+        <div class="d-flex align-items-center p-2 border-bottom">
+            <div class="flex-grow-1">
+                <div class="fw-bold">${item.nombre}</div>
+                <small class="text-muted">₡${item.precio.toLocaleString()} c/u</small>
+            </div>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(${item.producto_id}, -1)">
+                    <i class="bi bi-dash"></i>
+                </button>
+                <span class="mx-2">${item.cantidad}</span>
+                <button class="btn btn-sm btn-outline-secondary" onclick="updateQuantity(${item.producto_id}, 1)">
+                    <i class="bi bi-plus"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-danger ms-2" onclick="removeFromCart(${item.producto_id})">
+                    <i class="bi bi-trash"></i>
+                </button>
+            </div>
+        </div>
+    `).join('');
+}
+
+function updateQuantity(productId, change) {
+    const item = cart.find(item => item.producto_id === productId);
+    const product = products.find(p => p.id === productId);
+    
+    if (!item) return;
+    
+    const newQuantity = item.cantidad + change;
+    
+    if (newQuantity <= 0) {
+        removeFromCart(productId);
+        return;
+    }
+    
+    if (newQuantity > product.stock) {
+        alert('No hay suficiente stock disponible');
+        return;
+    }
+    
+    item.cantidad = newQuantity;
+    item.subtotal = item.cantidad * item.precio;
+    
+    updateCartDisplay();
+}
+
+function removeFromCart(productId) {
+    cart = cart.filter(item => item.producto_id !== productId);
+    updateCartDisplay();
+}
+
+function clearCart() {
+    cart = [];
+    updateCartDisplay();
+}
+
+function completeSale() {
+    if (cart.length === 0) {
+        alert('El carrito está vacío');
+        return;
+    }
+    
+    const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+    
+    document.getElementById('sale-summary').innerHTML = cart.map(item => `
+        <div class="d-flex justify-content-between">
+            <span>${item.nombre} x${item.cantidad}</span>
+            <span>₡${item.subtotal.toLocaleString()}</span>
+        </div>
+    `).join('');
+    
+    document.getElementById('modal-total').textContent = total.toLocaleString();
+    
+    const modal = new bootstrap.Modal(document.getElementById('saleModal'));
+    modal.show();
+}
+
+function processSale() {
+    const total = cart.reduce((sum, item) => sum + item.subtotal, 0);
+    
+    const saleData = {
+        items: cart,
+        total: total
+    };
+    
+    fetch('/api/sale', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(saleData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            alert('¡Venta procesada exitosamente!');
+            clearCart();
+            loadProducts(); // Recargar para actualizar stock
+            
+            const modal = bootstrap.Modal.getInstance(document.getElementById('saleModal'));
+            modal.hide();
+        } else {
+            alert('Error procesando la venta: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error procesando la venta');
+    });
+}
+</script>
+{% endblock %}

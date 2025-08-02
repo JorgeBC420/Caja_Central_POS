@@ -15,6 +15,9 @@ matplotlib
 reportlab
 jinja2
 xlsxwriter
+sqlalchemy
+flask
+tkinter-tooltip
 # Dependencias para facturación electrónica Costa Rica
 xmltodict
 python-dateutil

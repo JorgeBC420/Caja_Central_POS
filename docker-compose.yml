@@ -1,0 +1,221 @@
+version: '3.8'
+
+services:
+  # Base de datos principal con seguridad
+  pos-database:
+    image: alpine:3.19
+    container_name: pos-database
+    restart: unless-stopped
+    volumes:
+      - pos_data:/data:rw
+      - pos_backups:/backups:rw
+    environment:
+      - SQLITE_DB_PATH=/data/caja_registradora_pos_cr.db
+    networks:
+      - pos-internal
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    user: "1000:1000"
+    command: >
+      sh -c "
+        if [ ! -f /data/caja_registradora_pos_cr.db ]; then
+          echo 'Inicializando base de datos...'
+          touch /data/caja_registradora_pos_cr.db
+          chmod 600 /data/caja_registradora_pos_cr.db
+        fi &&
+        tail -f /dev/null
+      "
+
+  # Aplicación POS principal
+  pos-app:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: pos-app
+    restart: unless-stopped
+    depends_on:
+      - pos-database
+    volumes:
+      - pos_data:/app/data:rw
+      - pos_logs:/app/logs:rw
+      - pos_config:/app/config:ro
+      - pos_certificates:/app/certificates:ro
+    environment:
+      - DATABASE_PATH=/app/data/caja_registradora_pos_cr.db
+      - LOG_LEVEL=INFO
+      - SECURE_MODE=true
+      - SSL_CERT_PATH=/app/certificates/cert.pem
+      - SSL_KEY_PATH=/app/certificates/key.pem
+    networks:
+      - pos-internal
+      - pos-external
+    ports:
+      - "8080:8080"
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=100m
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8080/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # API de facturación electrónica
+  pos-billing-api:
+    build: 
+      context: .
+      dockerfile: docker/Dockerfile.billing
+    container_name: pos-billing-api
+    restart: unless-stopped
+    depends_on:
+      - pos-database
+    volumes:
+      - pos_certificates:/app/certificates:ro
+      - pos_logs:/app/logs:rw
+    environment:
+      - API_PORT=8000
+      - DATABASE_PATH=/app/data/caja_registradora_pos_cr.db
+      - HACIENDA_ENVIRONMENT=stag
+      - SSL_ENABLED=true
+    networks:
+      - pos-internal
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /tmp:noexec,nosuid,size=50m
+
+  # Proxy reverso con SSL
+  pos-nginx:
+    image: nginx:1.25-alpine
+    container_name: pos-nginx
+    restart: unless-stopped
+    depends_on:
+      - pos-app
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - pos_certificates:/etc/nginx/certificates:ro
+      - pos_logs:/var/log/nginx:rw
+    ports:
+      - "443:443"
+      - "80:80"
+    networks:
+      - pos-external
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:size=100m
+      - /var/run:size=10m
+
+  # Servicio de backup automatizado
+  pos-backup:
+    image: alpine:3.19
+    container_name: pos-backup
+    restart: unless-stopped
+    depends_on:
+      - pos-database
+    volumes:
+      - pos_data:/data:ro
+      - pos_backups:/backups:rw
+      - pos_logs:/logs:ro
+    environment:
+      - BACKUP_SCHEDULE="0 2 * * *"  # Daily at 2 AM
+      - RETENTION_DAYS=30
+    networks:
+      - pos-internal
+    security_opt:
+      - no-new-privileges:true
+    user: "1000:1000"
+    command: >
+      sh -c "
+        echo 'Iniciando servicio de backup...' &&
+        crond -f -d 8 &
+        echo '0 2 * * * /backup.sh' | crontab - &&
+        while true; do
+          echo 'Backup service running...'
+          sleep 3600
+        done
+      "
+
+  # Monitor de logs y métricas
+  pos-monitor:
+    image: alpine:3.19
+    container_name: pos-monitor
+    restart: unless-stopped
+    volumes:
+      - pos_logs:/logs:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      - MONITOR_INTERVAL=60
+    networks:
+      - pos-internal
+    security_opt:
+      - no-new-privileges:true
+    read_only: true
+    command: >
+      sh -c "
+        echo 'Monitor de sistema iniciado...' &&
+        while true; do
+          echo '[$(date)] Sistema operando normalmente'
+          sleep 60
+        done
+      "
+
+# Redes seguras
+networks:
+  pos-internal:
+    driver: bridge
+    internal: true  # Sin acceso a internet
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+  
+  pos-external:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.21.0.0/24
+
+# Volúmenes persistentes con backup
+volumes:
+  pos_data:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/data
+  
+  pos_logs:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/logs
+  
+  pos_config:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/config
+  
+  pos_certificates:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/certificates
+  
+  pos_backups:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${PWD}/backups

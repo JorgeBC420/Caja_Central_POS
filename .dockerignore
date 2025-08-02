@@ -1,0 +1,104 @@
+# Docker ignore file para Caja Central POS
+# Excluir archivos innecesarios del contexto de build
+
+# Archivos de sistema
+.DS_Store
+Thumbs.db
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+
+# Directorios de datos y logs (se montan como volúmenes)
+data/
+logs/
+backups/
+certificates/
+
+# Cache de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+
+# Entornos virtuales
+venv/
+env/
+ENV/
+.venv/
+
+# IDEs
+.vscode/
+.idea/
+*.sublime-*
+.atom/
+
+# Git
+.git/
+.gitignore
+.gitmodules
+
+# Documentación y desarrollo
+README.md
+CHANGELOG.md
+TODO.md
+docs/
+*.md
+
+# Archivos de configuración local
+.env
+.env.local
+.env.development
+config/local_*
+
+# Archivos de testing
+tests/
+test_*.py
+*_test.py
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Node.js (si aplica)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Archivos de build y distribución
+build/
+dist/
+*.egg-info/
+
+# Archivos de base de datos (se manejan por volúmenes)
+*.db
+*.sqlite
+*.sqlite3
+
+# Logs locales
+*.log
+
+# Archivos temporales de sistema
+.tmp/
+temp/
+
+# Archivos específicos de Docker
+docker-compose.override.yml
+.dockerignore
+
+# Archivos de backup locales
+*.bak
+*.backup
+
+# Archivos de certificados locales (se manejan por secrets)
+*.pem
+*.key
+*.crt
+*.p12
+
+# Scripts de desarrollo
+scripts/dev/
+deploy_local.sh
